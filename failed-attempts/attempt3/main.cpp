@@ -3,10 +3,64 @@
 #include <regex>
 #include <bitset>
 #include "turtle.h"
-#include "token.h"
 //#define NDEBUG
 #include "json.hpp"
 
+//using pointers like a jumptable
+//
+//typedef std::vector<std::pair<std::tuple<int, int, std::any>, std::vector<std::shared_ptr<void>>>> node;
+//
+//┌─  typedef std::pair< std::tuple<int, int, std::any> , NodeRoot> DocNode; <──┐
+//│   typedef std::vector<DocNode> DocRoot;                                     │
+//└─>  typedef std::vector<std::shared_ptr<void>> NodeRoot;                   ──┘
+//
+//std::vector<
+//             std::pair<
+//                  .first
+//                      std::tuple<
+//                         [0] int NodeId
+//                         [1] int NodeType
+//                         [2] std::any NodeData
+//                      >
+//                  .second
+//                      std::vector<
+//                         std::shared_ptr<void> of Parent
+//                         std::shared_ptr<void> of children
+//              >
+//>
+//      |Parent | Child |
+//Parent|   0   |   1   |
+//      | ──────────────|
+//Child |   1   |   0   |
+
+/*struct DocNode : public std::vector<int>
+{
+   //NodeTypes
+   //0) UNKOWN
+   //1) Document Root
+   //2) Scope group
+   //3) Parent
+   //4) Child
+   unsigned int NodeType = 0;
+   std::any tokenData;
+   unsigned int TokenID = 0;
+   unsigned int scope = 0;
+   //this->
+
+   //Initalise root of document
+   //void make_children bow chica wow wow
+   DocNode(const std::string &tmpData, const unsigned int &tmpType, const unsigned int &tmpIndex, const unsigned int &tmpScope)
+   {
+      tokenData = std::move(tmpData);
+      NodeType = std::move(tmpType);
+      TokenID = std::move(tmpIndex);
+      scope = std::move(tmpScope);
+   }
+   void make_child(unsigned int nodeID)
+   {
+      push_back(nodeID);
+   }
+};*/
 bool is_Newline(const std::string &tmp) { return tmp[0] == '\n'; }
 /*struct DocRoot : std::vector<DocNode>
 {
@@ -25,6 +79,15 @@ bool is_Newline(const std::string &tmp) { return tmp[0] == '\n'; }
       ++numberOfTokens;
    }
 };*/
+
+//typedef std::vector<std::pair<std::tuple<int, int, std::any>, std::vector<std::shared_ptr<void>>>> node;
+//std::tuple<
+//[0] -> int NodeId
+//[1] -> int NodeType (is it a  root parent? a single child? or a widowed mother? who knows but this)
+//[2] -> std::any NodeData
+//>
+
+typedef std::pair<std::string, std::bitset<32>> tokenData;
 
 int main(int argc, char *argv[])
 {
@@ -57,13 +120,12 @@ int main(int argc, char *argv[])
    const char *filename = argv[1];
 
    //incase I ever want to do more than one file at once in the future
-   std::vector<const char *> files(1);
+   std::vector<const char *> files;
    files.push_back(filename);
    //std::for each with the return as a break statment
    nlohmann::json DocumentJSON;
    DocumentJSON["DocumentData"] = R"({"lang": "C++"})"_json;
    DocumentJSON["tokens"] = nlohmann::json::array();
-
    (void)std::any_of(files.begin(), files.end(), [&](auto &file) {
       {
          std::string filedata = "";
@@ -104,14 +166,8 @@ int main(int argc, char *argv[])
             else
             {
                ++tokenIndex;
-               for (int type = 0; type < TURTLE_ENUM_NUMBER_OF_TOKEN_TYPES; ++i)
-               {
-                  try {
-
-                  } catch(std::out_of_range &e){}
-               }
             }
-            DocumentJSON["tokens"].push_back(nlohmann::json::array({lineIndex, scope, scopeIndex, tokenIndex, tok}));
+            DocumentJSON["tokens"].push_back(std::move(nlohmann::json::array({lineIndex, scope, scopeIndex, tokenIndex, std::move(tok)})));
          }
       }
       std::cout << DocumentJSON["tokens"].dump();
