@@ -80,13 +80,6 @@ bool is_Newline(const std::string &tmp) { return tmp[0] == '\n'; }
    }
 };*/
 
-//typedef std::vector<std::pair<std::tuple<int, int, std::any>, std::vector<std::shared_ptr<void>>>> node;
-//std::tuple<
-//[0] -> int NodeId
-//[1] -> int NodeType (is it a  root parent? a single child? or a widowed mother? who knows but this)
-//[2] -> std::any NodeData
-//>
-
 typedef std::pair<std::string, std::bitset<32>> tokenData;
 
 int main(int argc, char *argv[])
@@ -143,6 +136,7 @@ int main(int argc, char *argv[])
          }
          std::regex TokenRegex(R"(("""(?:[^\\"]|\\.)*"""|('(?:[^\\']|\\.)*'|"(?:[^\\"]|\\.)*")|(#[^\n]*)|(\n[ \t]*)|^|(([<>*\/]{2}=?)|([=<>!+\-*\\&|]=))|([!"\#%&'()*+,\-.\/:;<=>?@\[\\\]^‘{|}~]|[^\t\f\v\s!"\#%&'()*+,\-.\/:;<=>?@\[\\\]^‘{|}~]+)))");
          std::regex_iterator<std::string::iterator> rend, rit(filedata.begin(), filedata.end(), TokenRegex);
+         ++rit; // The first token is always "" skip over it
          // .reserve(std::distance(rit, rend));
          for (unsigned int lineIndex = 0, tokenIndex = 0, scope = 0, oldScope = 0, scopeIndex = 0;
               rit != rend;
@@ -171,15 +165,8 @@ int main(int argc, char *argv[])
          }
       }
       std::cout << DocumentJSON["tokens"].dump();
-      //std::for_each(DocumentJSON["tokens"].begin(), DocumentJSON["tokens"].end(), [&]() {});
       return EXIT_SUCCESS;
    });
-   //root.create_child(std::string("asdadas"), 1);
-   //std::cout << root[0].TokenID;
-   //root.make_child(&node2);
-   //node2.NodeType = 8;
-   //std::cout << root[0]->size;
    puts("\nDone");
-   //std::vector<std::array<char, 2>> tokVecLabels(tokVec.size(), {0});
    return EXIT_SUCCESS;
 }
