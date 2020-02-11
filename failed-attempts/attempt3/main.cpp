@@ -80,6 +80,13 @@ bool is_Newline(const std::string &tmp) { return tmp[0] == '\n'; }
    }
 };*/
 
+//typedef std::vector<std::pair<std::tuple<int, int, std::any>, std::vector<std::shared_ptr<void>>>> node;
+//std::tuple<
+//[0] -> int NodeId
+//[1] -> int NodeType (is it a  root parent? a single child? or a widowed mother? who knows but this)
+//[2] -> std::any NodeData
+//>
+
 typedef std::pair<std::string, std::bitset<32>> tokenData;
 
 int main(int argc, char *argv[])
@@ -119,6 +126,7 @@ int main(int argc, char *argv[])
    nlohmann::json DocumentJSON;
    DocumentJSON["DocumentData"] = R"({"lang": "C++"})"_json;
    DocumentJSON["tokens"] = nlohmann::json::array();
+   DocumentJSON["trans"] = nlohmann::json::array();
    (void)std::any_of(files.begin(), files.end(), [&](auto &file) {
       {
          std::string filedata = "";
@@ -138,7 +146,7 @@ int main(int argc, char *argv[])
          std::regex_iterator<std::string::iterator> rend, rit(filedata.begin(), filedata.end(), TokenRegex);
          ++rit; // The first token is always "" skip over it
          // .reserve(std::distance(rit, rend));
-         for (unsigned int lineIndex = 0, tokenIndex = 0, scope = 0, oldScope = 0, scopeIndex = 0;
+         for (unsigned int lineIndex = 0, tokenIndex = 0, scope = 0;
               rit != rend;
               ++rit)
          {
@@ -146,27 +154,28 @@ int main(int argc, char *argv[])
             if (tok[0] == '\n' || tok[0] == '\r')
             {
                ++lineIndex;
-               oldScope = std::move(scope);
                scope = tok.size() - 1; // the number of spaces minis the '\n' character
-               if (scope >= oldScope)
-               {
-                  ++scopeIndex;
-               }
-               else
-               {
-                  scopeIndex = 0;
-               }
             }
             else
             {
                ++tokenIndex;
             }
-            DocumentJSON["tokens"].push_back(std::move(nlohmann::json::array({lineIndex, scope, scopeIndex, tokenIndex, std::move(tok)})));
+            DocumentJSON["tokens"].push_back(std::move(nlohmann::json::array({lineIndex, scope, tokenIndex, std::move(tok)})));
          }
       }
-      std::cout << DocumentJSON["tokens"].dump();
+      std::cout << "Line Number, Number of Whitespace tokens on its current line, TokenNumber, token String\n";
+      for (unsigned int i = 0; i < DocumentJSON["tokens"].size(); ++i)
+      {
+         std::cout << DocumentJSON["tokens"][i].dump() << '\n';
+      }
       return EXIT_SUCCESS;
    });
+   //root.create_child(std::string("asdadas"), 1);
+   //std::cout << root[0].TokenID;
+   //root.make_child(&node2);
+   //node2.NodeType = 8;
+   //std::cout << root[0]->size;
    puts("\nDone");
+   //std::vector<std::array<char, 2>> tokVecLabels(tokVec.size(), {0});
    return EXIT_SUCCESS;
 }
