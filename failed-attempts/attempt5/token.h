@@ -10,9 +10,9 @@
  * it's just the translation needs to be automated. 
  * This is more of my try at reinventing the wheel.
  * 
- * This projects purpose is to translate Python3 code 
- * to C++20 in order to create C++ bash scripts that 
- * can be compiled and run faster than Python code
+ * My motivations to do this to translate Python3 code 
+ * to C++20 in order to create C++ bash scripts that run fast.
+ * Also I hate python.
  */
 
 #include <string>
