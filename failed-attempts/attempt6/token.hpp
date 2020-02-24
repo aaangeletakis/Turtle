@@ -486,7 +486,7 @@ enum ArithmeticTokenFlags
  * efficently, and fast
 */
 
-//struct TokenPair {const char *TokenString, const unsigned long int};
+//struct TokenPair {const char *TokenString, const unsigned int};
 constexpr const TokenPair turtleBuiltinTokenMap[] = {
     {"==", token::flag::ARITHMETIC_EQUAL_TO},
     {"!=", token::flag::ARITHMETIC_NOT_EQUAL},
