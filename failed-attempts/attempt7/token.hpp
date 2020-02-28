@@ -12,14 +12,13 @@
  * 
  * My motivations to do this to translate Python3 code 
  * to C++20 in order to create C++ bash scripts that run fast.
- * Also I hate python.
  * 
  * Throughout this file I make long comments -- these are not 
  * ment for you, but me, as I have a terrible memory.
  * 
  * Effort is made to use the smallest data type for the flag;
  * Currently the flag is represented by a 16 bit unsigned intager, 
- * but technically only needs 10 bits to operate.
+ * but technically only 10 bits is needed to operate.
  * 
  * I thought about using char (8 bits) for the flag but I 
  * decided to give myself a little bit of leeway.
@@ -137,7 +136,7 @@ struct Node
 
     void *ptr[2];
 
-    //Node as if it was and array
+    //Make it so as if the Node was an array
     void *operator[](std::size_t n)
     {
         return ptr[n];
@@ -377,7 +376,7 @@ enum tokenTypeFlags
     Any identifier Tokens are represented by a numeric id,
     The token flags MSB will be 1 like a signed integer to represent that it is an identifier
     To get the tokens numeric id perform
-        ( flag::IDENTIFIER ^ Token.TokenFlags )
+        ( flag::IDENTIFIER XOR Token.TokenFlags )
 */
 
 enum DataTypeTokensFlags
