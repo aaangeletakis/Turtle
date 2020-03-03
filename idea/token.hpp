@@ -16,13 +16,16 @@
  * Throughout this file I make long comments -- these are not 
  * ment for you, but me, as I have a terrible memory.
  * 
+ * The use of enums are really a great thing as they can be 
+ * used further than pre-calculated magic numbers
+ *
  * Effort is made to use the smallest data type for the flag;
  * Currently the flag is represented by a 16 bit unsigned intager, 
  * but technically only 10 bits is needed to operate.
  * 
  * I thought about using char (8 bits) for the flag but I 
  * decided to give myself a little bit of leeway.
- * 
+ *
  * Different Types of tokens are separated into classes;
  * Separating tokens into classes makes it possible to compresses
  * the information and give each types of token its unique "fingerprint"
