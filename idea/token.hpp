@@ -28,6 +28,14 @@
  * the information and give each types of token its unique "fingerprint"
  * or id.
  * 
+ * Once a specific token has been identified as some sort of predefined or
+ * identifier it's token string is deleted from program memory, as 
+ * it is more efficent to just store the identifying "fingerprint" of a token
+ * then a multi character string.
+ *      Example:
+ *          The '(' left brace token is predefined, give it the numeric id 
+ *          DELIMITER_CURVED_LEFT_BRACE, delete token string and go to 
+ *          the next token
  * 
  * At the parse tree stage, each deliminar          is a terminal,
  *                          each identifier or data is a non-terminal
@@ -40,28 +48,30 @@
 #include <algorithm>
 
 //In case I want to change it to something bigger/smaller in the future
-typedef int16_t TURTLES_FLAG_DATA_TYPE;
+typedef uint16_t TURTLES_FLAG_DATA_TYPE;
 #define turtle_flag(N) (TURTLES_FLAG_DATA_TYPE(1) << (N))
+#define tokenTypeFlagMacro(N) ( N << ( (sizeof(TURTLES_FLAG_DATA_TYPE) * 8) - (3 /* Number of Bits needed */) ) )
 
 namespace turtle
 {
 
 struct TokenDataStructure
 {
-    //const unsigned int LineNumber;
+    /*const unsigned int LineNumber;*/
 
-    //Number of whitespace
-    //const unsigned int Scope;
-
-    std::string TokenString;
-
+    /*
+     * Number of whitespace
+     * const unsigned int Scope;
+     */
+    
     TURTLES_FLAG_DATA_TYPE TokenFlags = 0;
+    std::string TokenString;
 };
 
 struct TokenPair
 {
-    std::string str;
     TURTLES_FLAG_DATA_TYPE flag;
+    std::string str;
 };
 
 struct DocumentData
@@ -278,7 +288,7 @@ enum FlagsOfArithmeticTokens
     ARITHMETIC_BIT_LEFT_SHIFT,
     ARITHMETIC_BIT_RIGHT_SHIFT,
 
-    ARITHMETIC_EQUAL_TO = 1,
+    ARITHMETIC_EQUAL_TO = 1, //LOGICAL CLASS
     ARITHMETIC_GREATER_THAN,
     ARITHMETIC_LESS_THAN,
     ARITHMETIC_NOT,
@@ -361,8 +371,6 @@ namespace flag
  * }
  */
 
-#define tokenTypeFlagMacro(T) ((T) << ((sizeof(TURTLES_FLAG_DATA_TYPE) * 8) - (3 /* Number of Bits needed */)))
-
 enum tokenTypeFlags
 {
     DELIMITERS = tokenTypeFlagMacro(token::DELIMITERS),
@@ -414,46 +422,21 @@ enum OperatorTypeTokensFlags
 {
     //01 -> 00000000 00000001
     DELIMITER_ASSIGN = turtle_flag(token::DELIMITER_ASSIGN) | flag::DELIMITERS,
-
-    //03 -> 00000000 00000011
     ARITHMETIC_ADD_ASSIGN = (token::ARITHMETIC_ADD << (token::DELIMITER_ASSIGN + 1) | flag::DELIMITER_ASSIGN),
-
-    //05 -> 00000000 00000101
     ARITHMETIC_SUB_ASSIGN = (token::ARITHMETIC_SUB << (token::DELIMITER_ASSIGN + 1) | flag::DELIMITER_ASSIGN),
-
-    //07 -> 00000000 00000111
     ARITHMETIC_MULL_ASSIGN = (token::ARITHMETIC_MULL << (token::DELIMITER_ASSIGN + 1) | flag::DELIMITER_ASSIGN),
-
-    //09 -> 00000000 00001001
     ARITHMETIC_DIV_ASSIGN = (token::ARITHMETIC_DIV << (token::DELIMITER_ASSIGN + 1) | flag::DELIMITER_ASSIGN),
-
-    //11 -> 00000000 00001011
     ARITHMETIC_MOD_ASSIGN = (token::ARITHMETIC_MOD << (token::DELIMITER_ASSIGN + 1) | flag::DELIMITER_ASSIGN),
-
-    //13 -> 00000000 00001101
     ARITHMETIC_FLOOR_ASSIGN = (token::ARITHMETIC_FLOOR << (token::DELIMITER_ASSIGN + 1) | flag::DELIMITER_ASSIGN),
-
-    //15 -> 00000000 00001111
     ARITHMETIC_EXPONENTIAL_ASSIGN = (token::ARITHMETIC_EXPONENTIAL << (token::DELIMITER_ASSIGN + 1) | flag::DELIMITER_ASSIGN),
-
-    //17 -> 00000000 00010001
     ARITHMETIC_BIT_AND_ASSIGN = (token::ARITHMETIC_BIT_AND << (token::DELIMITER_ASSIGN + 1) | flag::DELIMITER_ASSIGN),
-
-    //19 -> 00000000 00010011
     ARITHMETIC_BIT_OR_ASSIGN = (token::ARITHMETIC_BIT_OR << (token::DELIMITER_ASSIGN + 1) | flag::DELIMITER_ASSIGN),
-
-    //23 -> 00000000 00010111
     ARITHMETIC_BIT_XOR_ASSIGN = (token::ARITHMETIC_BIT_XOR << (token::DELIMITER_ASSIGN + 1) | flag::DELIMITER_ASSIGN),
-
-    //25 -> 00000000 00011001
     ARITHMETIC_BIT_LEFT_SHIFT_ASSIGN = (token::ARITHMETIC_BIT_LEFT_SHIFT << (token::DELIMITER_ASSIGN + 1) | flag::DELIMITER_ASSIGN),
-
-    //27 -> 00000000 000011011
     ARITHMETIC_BIT_RIGHT_SHIFT_ASSIGN = (token::ARITHMETIC_BIT_RIGHT_SHIFT << (token::DELIMITER_ASSIGN + 1) | flag::DELIMITER_ASSIGN),
-
-    //02 -> 00000000 000000010
+    
     DELIMITER_BRACE = turtle_flag(token::DELIMITER_BRACE) | flag::DELIMITERS,
-
+    
     DELIMITER_LEFT_BRACE = turtle_flag(token::DELIMITER_LEFT_OR_RIGHT_BRACE) | flag::DELIMITERS, // 1 = Left, 0 = Right
 
     DELIMITER_CURVED_BRACE = turtle_flag(token::DELIMITER_CURVED_BRACE) | flag::DELIMITERS,
