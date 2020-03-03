@@ -602,7 +602,7 @@ constexpr const TokenMapPair turtleBuiltinTokenMap[] = {
     {"&=", token::flag::ARITHMETIC_BIT_AND_ASSIGN},
     {"|=", token::flag::ARITHMETIC_BIT_OR_ASSIGN},
     {"^=", token::flag::ARITHMETIC_BIT_XOR_ASSIGN},
-    //{"~=", token::ARITHMETIC_BIT_NOT_ASSIGN}, does not exist
+    //"~=" operator does not exist
     {"<<=", token::flag::ARITHMETIC_BIT_LEFT_SHIFT_ASSIGN},
     {">>=", token::flag::ARITHMETIC_BIT_RIGHT_SHIFT_ASSIGN},
 
