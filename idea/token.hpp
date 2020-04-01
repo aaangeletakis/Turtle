@@ -17,7 +17,7 @@
  * ment for you, but me, as I have a terrible memory.
  * 
  * The use of enums are really a great thing as they can be 
- * used further than pre-calculated magic numbers
+ * used as pre-calculated magic numbers
  *
  * Effort is made to use the smallest data type for the flag;
  * Currently the flag is represented by a 16 bit unsigned intager, 
