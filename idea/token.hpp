@@ -49,11 +49,18 @@
 #include <stdint.h>
 #include <vector>
 #include <algorithm>
+#include <bitset>
 
 //In case I want to change it to something bigger/smaller in the future
-typedef uint16_t TURTLES_FLAG_DATA_TYPE;
-#define turtle_flag(N) (TURTLES_FLAG_DATA_TYPE(1) << (N))
-#define tokenTypeFlagMacro(N) ( N << ( (sizeof(TURTLES_FLAG_DATA_TYPE) * 8) - (3 /* Number of Bits needed */) ) )
+//typedef uint16_t TURTLES_FLAG_DATA_TYPE;
+
+//      M_turtle_flag(N) (00000000 00000001 << (N))
+#define M_turtle_flag(N) (uint16_t(1)       << (N))
+
+//Refer to the huge comment in the flag namespace on wtf this is & does
+#define M_tokenTypeFlagMacro(N) ( N << ( (sizeof(uint16_t) * 8) - (3 /* Number of Bits needed */) ) )
+
+//#define M_getBit(N)  sizeof(TURTLES_FLAG_DATA_TYPE) * 8)
 
 namespace turtle
 {
@@ -67,22 +74,38 @@ struct TokenDataStructure
      * const unsigned int Scope;
      */
     
-    TURTLES_FLAG_DATA_TYPE TokenFlags = 0;
+    uint16_t TokenFlags = 0;
     std::string TokenString;
 };
 
 struct TokenPair
 {
-    TURTLES_FLAG_DATA_TYPE flag;
+    uint16_t flag;
     std::string str;
 };
 
-struct DocumentData
+struct Node{
+      //Document Nodes
+      static std::vector<struct Node> Nodes;
+      //
+      //Node
+      //uint16_t NodeFlags; ─> (*(TokenPair *)Node[ i ].Data).flag
+      Node* Parent = 0;
+      void* Data = 0;
+      Node* Children[2] = {0};
+};
+
+//std::vector<struct Node> SyntaxGroups
+//         ||
+//         \/
+//std::vector<struct Node> SemanticGroups
+
+/*struct DocumentData
 {
     struct DocNodePair
     {
         std::string_view str;
-        TURTLES_FLAG_DATA_TYPE *flagPtr;
+
     };
 
     std::vector<std::string> TokenStrings;
@@ -138,36 +161,9 @@ struct DocumentData
         TokenFlags.push_back(flag);
         Tokens.push_back({TokenStrings.back(), &TokenFlags.back()});
     }
-};
+};*/
 
 
-struct Node
-{
-    static struct DocumentData Data;
-    static std::vector<struct Node> Nodes;
-    static std::vector<TURTLES_FLAG_DATA_TYPE> dataMap;
-
-    void *ptr[2];
-
-    //Make it so as if the Node was an array
-    void *operator[](std::size_t n)
-    {
-        return ptr[n];
-    }
-
-    auto left(){
-        return ptr[0];
-    }
-
-    auto right(){
-        return ptr[1];
-    }
-
-    constexpr auto size()
-    {
-        return 2;
-    }
-};
 //                 Token String, Token Type, TokenInfo
 //typedef std::tuple<std::string, char, std::bitset<32>> TokenData;
 //typedef std::map<std::string, std::bitset<32>> TokenMap;
@@ -177,20 +173,7 @@ struct Node
 struct TokenMapPair
 {
     const char *TokenString;
-    const TURTLES_FLAG_DATA_TYPE TokenFlags;
-};
-
-//This is a failure
-//Update with a better system in the next failed attempt
-struct NodePair
-{
-    //Is it a parent or a child?
-    bool Type;
-
-    //Pointer to child->parent vector
-    //or
-    //Pointer to child TokenDataStructure
-    void *NodePtr;
+    const uint16_t TokenFlags;
 };
 
 namespace token
@@ -198,6 +181,7 @@ namespace token
 
 enum tokenType
 {
+    NULL_TOKEN,
     DELIMITERS, // such as '(' or ')' or '.' or '[' or  ']' ','
     ARITHMETIC,
     KEYWORD,    // any builtin type
@@ -213,7 +197,7 @@ enum DataTypeTokens
     DATA_TYPE_FORMATTED,
     DATA_TYPE_FORMAT_TYPE, // "%s" printf style or "{}".format style?
     DATA_TYPE_NUMBER,
-    DATA_TYPE_,
+    DATA_TYPE_, //unknown -- make effort to determine
     DATA_TYPE_COMMENT,
 };
 
@@ -316,11 +300,12 @@ namespace flag
  * 
  *    MSB    LSB
  *    |      |
- * #0 00000...[Type of Delim]   - > DELIMITERS
- * #1 00100...[Type of Arith]   - > ARITHMETIC
- * #2 01000...[Type of Keyword] - > KEYWORD
- * #3 01100...[Type of Data]    - > DATA
- * #4 10000...[Numeric id]      - > IDENTIFIER
+ * #0 0000...0                 - > NULL_TOKEN
+ * #1 0010...[Type of Delim]   - > DELIMITERS
+ * #2 0100...[Type of Arith]   - > ARITHMETIC
+ * #3 0110...[Type of Keyword] - > KEYWORD
+ * #4 1000...[Type of Data]    - > DATA
+ * #5 1010...[Numeric id]      - > IDENTIFIER
  * 
  * The MSB in the token flags segment will be the IDENTIFIER flag.
  * If the token is not an IDENTIFIER, The token
@@ -360,6 +345,7 @@ namespace flag
  * #2 00100...[Type of Arith]   - > ARITHMETIC
  * #3 00010...[Type of Keyword] - > KEYWORD
  * #4 00001...[Type of Data]    - > DATA
+ * #4 00000...[No Token]        - > NULL_TOKEN
  * 
  * as this second approch would call for a FOR loop such as
  * for(int i=32 bits; i >=0; ++i){
@@ -376,11 +362,12 @@ namespace flag
 
 enum tokenTypeFlags
 {
-    DELIMITERS = tokenTypeFlagMacro(token::DELIMITERS),
-    ARITHMETIC = tokenTypeFlagMacro(token::ARITHMETIC),
-    KEYWORD = tokenTypeFlagMacro(token::KEYWORD),
-    DATA = tokenTypeFlagMacro(token::DATA),
-    IDENTIFIER = tokenTypeFlagMacro(token::IDENTIFIER),
+  //NULL_TOKEN = 0
+    DELIMITERS = M_tokenTypeFlagMacro(token::DELIMITERS),
+    ARITHMETIC = M_tokenTypeFlagMacro(token::ARITHMETIC),
+    KEYWORD = M_tokenTypeFlagMacro(token::KEYWORD),
+    DATA = M_tokenTypeFlagMacro(token::DATA),
+    IDENTIFIER = M_tokenTypeFlagMacro(token::IDENTIFIER),
 };
 
 /*
@@ -392,10 +379,10 @@ enum tokenTypeFlags
 
 enum DataTypeTokensFlags
 {
-    DATA_TYPE_STRING = turtle_flag(token::DATA_TYPE_STRING) | flag::DATA,
-    DATA_TYPE_RAW = turtle_flag(token::DATA_TYPE_RAW) | flag::DATA,
-    DATA_TYPE_COMMENT = turtle_flag(token::DATA_TYPE_COMMENT) | flag::DATA,
-    DATA_TYPE_NUMBER = turtle_flag(token::DATA_TYPE_NUMBER) | flag::DATA,
+    DATA_TYPE_STRING = M_turtle_flag(token::DATA_TYPE_STRING) | flag::DATA,
+    DATA_TYPE_RAW = M_turtle_flag(token::DATA_TYPE_RAW) | flag::DATA,
+    DATA_TYPE_COMMENT = M_turtle_flag(token::DATA_TYPE_COMMENT) | flag::DATA,
+    DATA_TYPE_NUMBER = M_turtle_flag(token::DATA_TYPE_NUMBER) | flag::DATA,
     DATA_TYPE_RAW_STRING = (flag::DATA_TYPE_STRING | flag::DATA_TYPE_RAW)
 };
 /*
@@ -424,7 +411,7 @@ enum DataTypeTokensFlags
 enum OperatorTypeTokensFlags
 {
     //01 -> 00000000 00000001
-    DELIMITER_ASSIGN = turtle_flag(token::DELIMITER_ASSIGN) | flag::DELIMITERS,
+    DELIMITER_ASSIGN = M_turtle_flag(token::DELIMITER_ASSIGN) | flag::DELIMITERS,
     ARITHMETIC_ADD_ASSIGN = (token::ARITHMETIC_ADD << (token::DELIMITER_ASSIGN + 1) | flag::DELIMITER_ASSIGN),
     ARITHMETIC_SUB_ASSIGN = (token::ARITHMETIC_SUB << (token::DELIMITER_ASSIGN + 1) | flag::DELIMITER_ASSIGN),
     ARITHMETIC_MULL_ASSIGN = (token::ARITHMETIC_MULL << (token::DELIMITER_ASSIGN + 1) | flag::DELIMITER_ASSIGN),
@@ -438,13 +425,13 @@ enum OperatorTypeTokensFlags
     ARITHMETIC_BIT_LEFT_SHIFT_ASSIGN = (token::ARITHMETIC_BIT_LEFT_SHIFT << (token::DELIMITER_ASSIGN + 1) | flag::DELIMITER_ASSIGN),
     ARITHMETIC_BIT_RIGHT_SHIFT_ASSIGN = (token::ARITHMETIC_BIT_RIGHT_SHIFT << (token::DELIMITER_ASSIGN + 1) | flag::DELIMITER_ASSIGN),
     
-    DELIMITER_BRACE = turtle_flag(token::DELIMITER_BRACE) | flag::DELIMITERS,
+    DELIMITER_BRACE = M_turtle_flag(token::DELIMITER_BRACE) | flag::DELIMITERS,
     
-    DELIMITER_LEFT_BRACE = turtle_flag(token::DELIMITER_LEFT_OR_RIGHT_BRACE) | flag::DELIMITERS, // 1 = Left, 0 = Right
+    DELIMITER_LEFT_BRACE = M_turtle_flag(token::DELIMITER_LEFT_OR_RIGHT_BRACE) | flag::DELIMITERS, // 1 = Left, 0 = Right
 
-    DELIMITER_CURVED_BRACE = turtle_flag(token::DELIMITER_CURVED_BRACE) | flag::DELIMITERS,
-    DELIMITER_SQUARE_BRACE = turtle_flag(token::DELIMITER_SQUARE_BRACE) | flag::DELIMITERS,
-    DELIMITER_CURLY_BRACE = turtle_flag(token::DELIMITER_CURLY_BRACE) | flag::DELIMITERS,
+    DELIMITER_CURVED_BRACE = M_turtle_flag(token::DELIMITER_CURVED_BRACE) | flag::DELIMITERS,
+    DELIMITER_SQUARE_BRACE = M_turtle_flag(token::DELIMITER_SQUARE_BRACE) | flag::DELIMITERS,
+    DELIMITER_CURLY_BRACE = M_turtle_flag(token::DELIMITER_CURLY_BRACE) | flag::DELIMITERS,
 
     DELIMITER_CURVED_RIGHT_BRACE = (DELIMITER_CURVED_BRACE | DELIMITER_BRACE),
     DELIMITER_CURVED_LEFT_BRACE = (DELIMITER_CURVED_BRACE | DELIMITER_LEFT_BRACE | DELIMITER_BRACE),
@@ -453,12 +440,12 @@ enum OperatorTypeTokensFlags
     DELIMITER_CURLY_RIGHT_BRACE = (DELIMITER_CURLY_BRACE | DELIMITER_BRACE),
     DELIMITER_CURLY_LEFT_BRACE = (DELIMITER_CURLY_BRACE | DELIMITER_LEFT_BRACE | DELIMITER_BRACE),
 
-    DELIMITER_AT_SIGN = turtle_flag(token::DELIMITER_AT_SIGN) | flag::DELIMITERS,
-    DELIMITER_COLON = turtle_flag(token::DELIMITER_COLON) | flag::DELIMITERS,
-    DELIMITER_SEMICOLON = turtle_flag(token::DELIMITER_SEMICOLON) | flag::DELIMITERS,
-    DELIMITER_COMMA = turtle_flag(token::DELIMITER_COMMA) | flag::DELIMITERS,
-    DELIMITER_PERIOD = turtle_flag(token::DELIMITER_PERIOD) | flag::DELIMITERS,
-    DELIMITER_ACCESS = turtle_flag(token::DELIMITER_ACCESS) | flag::DELIMITERS,
+    DELIMITER_AT_SIGN = M_turtle_flag(token::DELIMITER_AT_SIGN) | flag::DELIMITERS,
+    DELIMITER_COLON = M_turtle_flag(token::DELIMITER_COLON) | flag::DELIMITERS,
+    DELIMITER_SEMICOLON = M_turtle_flag(token::DELIMITER_SEMICOLON) | flag::DELIMITERS,
+    DELIMITER_COMMA = M_turtle_flag(token::DELIMITER_COMMA) | flag::DELIMITERS,
+    DELIMITER_PERIOD = M_turtle_flag(token::DELIMITER_PERIOD) | flag::DELIMITERS,
+    DELIMITER_ACCESS = M_turtle_flag(token::DELIMITER_ACCESS) | flag::DELIMITERS,
 };
 
 enum KeywordTokenFlags
@@ -521,33 +508,33 @@ enum KeywordTokenFlags
 enum ArithmeticTokenFlags
 {
     //00100000 00000001
-    ARITHMETIC_OPERATION = turtle_flag(token::ARITHMETIC_OPERATION) | flag::ARITHMETIC,
+    ARITHMETIC_OPERATION = M_turtle_flag(token::ARITHMETIC_OPERATION) | flag::ARITHMETIC,
 
-    ARITHMETIC_ADD = turtle_flag(token::ARITHMETIC_ADD) | flag::ARITHMETIC_OPERATION,
-    ARITHMETIC_SUB = turtle_flag(token::ARITHMETIC_SUB) | flag::ARITHMETIC_OPERATION,
-    ARITHMETIC_MULL = turtle_flag(token::ARITHMETIC_MULL) | flag::ARITHMETIC_OPERATION,
-    ARITHMETIC_DIV = turtle_flag(token::ARITHMETIC_DIV) | flag::ARITHMETIC_OPERATION,
-    ARITHMETIC_MOD = turtle_flag(token::ARITHMETIC_MOD) | flag::ARITHMETIC_OPERATION,
-    ARITHMETIC_FLOOR = turtle_flag(token::ARITHMETIC_FLOOR) | flag::ARITHMETIC_OPERATION,
-    ARITHMETIC_EXPONENTIAL = turtle_flag(token::ARITHMETIC_EXPONENTIAL) | flag::ARITHMETIC_OPERATION,
-    ARITHMETIC_BIT_AND = turtle_flag(token::ARITHMETIC_BIT_AND) | flag::ARITHMETIC_OPERATION,
-    ARITHMETIC_BIT_OR = turtle_flag(token::ARITHMETIC_BIT_OR) | flag::ARITHMETIC_OPERATION,
-    ARITHMETIC_BIT_XOR = turtle_flag(token::ARITHMETIC_BIT_XOR) | flag::ARITHMETIC_OPERATION,
-    ARITHMETIC_BIT_NOT = turtle_flag(token::ARITHMETIC_BIT_NOT) | flag::ARITHMETIC_OPERATION,
-    ARITHMETIC_BIT_LEFT_SHIFT = turtle_flag(token::ARITHMETIC_BIT_LEFT_SHIFT) | flag::ARITHMETIC_OPERATION,
-    ARITHMETIC_BIT_RIGHT_SHIFT = turtle_flag(token::ARITHMETIC_BIT_RIGHT_SHIFT) | flag::ARITHMETIC_OPERATION,
+    ARITHMETIC_ADD = M_turtle_flag(token::ARITHMETIC_ADD) | flag::ARITHMETIC_OPERATION,
+    ARITHMETIC_SUB = M_turtle_flag(token::ARITHMETIC_SUB) | flag::ARITHMETIC_OPERATION,
+    ARITHMETIC_MULL = M_turtle_flag(token::ARITHMETIC_MULL) | flag::ARITHMETIC_OPERATION,
+    ARITHMETIC_DIV = M_turtle_flag(token::ARITHMETIC_DIV) | flag::ARITHMETIC_OPERATION,
+    ARITHMETIC_MOD = M_turtle_flag(token::ARITHMETIC_MOD) | flag::ARITHMETIC_OPERATION,
+    ARITHMETIC_FLOOR = M_turtle_flag(token::ARITHMETIC_FLOOR) | flag::ARITHMETIC_OPERATION,
+    ARITHMETIC_EXPONENTIAL = M_turtle_flag(token::ARITHMETIC_EXPONENTIAL) | flag::ARITHMETIC_OPERATION,
+    ARITHMETIC_BIT_AND = M_turtle_flag(token::ARITHMETIC_BIT_AND) | flag::ARITHMETIC_OPERATION,
+    ARITHMETIC_BIT_OR = M_turtle_flag(token::ARITHMETIC_BIT_OR) | flag::ARITHMETIC_OPERATION,
+    ARITHMETIC_BIT_XOR = M_turtle_flag(token::ARITHMETIC_BIT_XOR) | flag::ARITHMETIC_OPERATION,
+    ARITHMETIC_BIT_NOT = M_turtle_flag(token::ARITHMETIC_BIT_NOT) | flag::ARITHMETIC_OPERATION,
+    ARITHMETIC_BIT_LEFT_SHIFT = M_turtle_flag(token::ARITHMETIC_BIT_LEFT_SHIFT) | flag::ARITHMETIC_OPERATION,
+    ARITHMETIC_BIT_RIGHT_SHIFT = M_turtle_flag(token::ARITHMETIC_BIT_RIGHT_SHIFT) | flag::ARITHMETIC_OPERATION,
 
     //0010000000000010
-    ARITHMETIC_EQUAL_TO = turtle_flag(token::ARITHMETIC_EQUAL_TO) | flag::ARITHMETIC,
+    ARITHMETIC_EQUAL_TO = M_turtle_flag(token::ARITHMETIC_EQUAL_TO) | flag::ARITHMETIC,
 
     //0010000000000100
-    ARITHMETIC_GREATER_THAN = turtle_flag(token::ARITHMETIC_GREATER_THAN) | flag::ARITHMETIC,
+    ARITHMETIC_GREATER_THAN = M_turtle_flag(token::ARITHMETIC_GREATER_THAN) | flag::ARITHMETIC,
 
     //0010000000001000
-    ARITHMETIC_LESS_THAN = turtle_flag(token::ARITHMETIC_LESS_THAN) | flag::ARITHMETIC,
+    ARITHMETIC_LESS_THAN = M_turtle_flag(token::ARITHMETIC_LESS_THAN) | flag::ARITHMETIC,
 
     //0010000000010000
-    ARITHMETIC_NOT = turtle_flag(token::ARITHMETIC_NOT) | flag::ARITHMETIC,
+    ARITHMETIC_NOT = M_turtle_flag(token::ARITHMETIC_NOT) | flag::ARITHMETIC,
 
     //0000000000000110
     ARITHMETIC_GREATER_THAN_EQUAL_TO = (flag::ARITHMETIC_EQUAL_TO | flag::ARITHMETIC_GREATER_THAN),
@@ -556,7 +543,7 @@ enum ArithmeticTokenFlags
     ARITHMETIC_LESS_THAN_EQUAL_TO = (flag::ARITHMETIC_EQUAL_TO | flag::ARITHMETIC_LESS_THAN),
 
     //0010000000010010
-    ARITHMETIC_NOT_EQUAL = turtle_flag(token::ARITHMETIC_NOT) | flag::ARITHMETIC_EQUAL_TO,
+    ARITHMETIC_NOT_EQUAL = M_turtle_flag(token::ARITHMETIC_NOT) | flag::ARITHMETIC_EQUAL_TO,
 };
 } // namespace flag
 
