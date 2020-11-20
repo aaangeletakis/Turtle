@@ -232,12 +232,12 @@ namespace flag
  * The MSB in the token flags segment will be the IDENTIFIER flag.
  * If the token is not an IDENTIFIER, The token
  * types 2-6 will have a numeric id that can be extracted via
- *      (TokenFlag >> ( ( sizeof(TURTLES_FLAG_DATA_TYPE) * 8 ) - 3 ) )
+ *      (TokenFlag >> ( ( sizeof(TURTLES_FLAG_DATA_TYPE) * 8 ) - 4 ) )
  * 
  * This will make it possible to do:
  * 
  * if(TokenFlag not IDENTIFIER (i.e. the MSB is not set) ){
- *      switch(TokenFlag >> (32 bits - 3) ){
+ *      switch(TokenFlag >> (32 bits - 4) ){
  *          case DELIMITERS:
  *          case ARITHMETIC:
  *          case KEYWORD:
@@ -248,7 +248,7 @@ namespace flag
  * or even
  * 
  * int tmp=0;
- * tmpTokenType += (TokenFlag >> (32 bits - 3) );
+ * tmpTokenType += (TokenFlag >> (32 bits - 4) );
  * if( tmpTokenType != IDENTIFIER ){
  *      switch(tmpTokenType){
  *          ...
