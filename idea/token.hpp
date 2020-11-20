@@ -93,13 +93,6 @@ struct Node{
 //         \/
 //std::vector<struct Node> SemanticGroups
 
-
-struct TokenMapPair
-{
-    const char *TokenString;
-    const uint32_t TokenFlags;
-};
-
 namespace token
 {
 
@@ -478,7 +471,11 @@ enum ArithmeticTokenFlags
  * efficently, and fast
 */
 
-//struct TokenPair {const char *TokenString, const unsigned long int};
+struct TokenMapPair
+{
+    const char *TokenString;
+    const uint32_t TokenFlags;
+};
 constexpr const TokenMapPair turtleBuiltinTokenMap[] = {
     {"==", token::flag::ARITHMETIC_EQUAL_TO},
     {"!=", token::flag::ARITHMETIC_NOT_EQUAL},
