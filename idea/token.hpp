@@ -279,7 +279,7 @@ enum tokenTypeFlags
  *    ┌──> Flag Type - Control Class Id
  *    │
  * ┌──┤                               ┌───> Is null token
- * 00000000  00000000 00001000 00000000
+ * 00000000  00000000 00000000 00000000
  *
  *
  *
