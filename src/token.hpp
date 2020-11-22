@@ -77,16 +77,6 @@ struct TokenDataStructure
     std::string TokenString;
 };
 
-struct Node{
-      //Document Nodes
-      static std::vector<struct Node> Nodes;
-      static std::vector<std::string> identifiers;
-      //
-      //Node
-      uint32_t NodeFlags = 0;
-      Node* Parent = 0;
-      Node* Children[2] = {0};
-};
 
 //std::vector<struct Node> SyntaxGroups
 //         ||
@@ -133,7 +123,7 @@ enum OperatorTypeTokens
     DELIMITER_SEMICOLON,
     DELIMITER_COMMA,
     DELIMITER_PERIOD, // access token '.'
-    DELIMITER_ACCESS,
+    //DELIMITER_ACCESS,
 
     DELIMITER_LEFT_OR_RIGHT_BRACE = DELIMITER_BRACE + 1, // 0 = Left, 1 = Right
     DELIMITER_CURVED_BRACE,                              // '(' or ')'
@@ -292,9 +282,15 @@ enum ControlTypeFlags{
 
 /*
     Any identifier Tokens are represented by a numeric id,
-    The token flags MSB will be 1 like a signed integer to represent that it is an identifier
     To get the tokens numeric id perform
         ( flag::IDENTIFIER XOR Node.NodeFlag )
+
+
+       ┌──> Flag Type - IDENTIFIER Class Id
+       │
+    ┌──┤
+    10100000  00000000 00000000 10000101
+        └──────────────────────────────┴──> Numeric Id
 */
 
 enum DataTypeTokensFlags
@@ -367,7 +363,7 @@ enum OperatorTypeTokensFlags
     DELIMITER_SEMICOLON = M_turtle_flag(token::DELIMITER_SEMICOLON) | flag::DELIMITERS,
     DELIMITER_COMMA = M_turtle_flag(token::DELIMITER_COMMA) | flag::DELIMITERS,
     DELIMITER_PERIOD = M_turtle_flag(token::DELIMITER_PERIOD) | flag::DELIMITERS,
-    DELIMITER_ACCESS = M_turtle_flag(token::DELIMITER_ACCESS) | flag::DELIMITERS,
+    //DELIMITER_ACCESS = M_turtle_flag(token::DELIMITER_ACCESS) | flag::DELIMITERS,
 };
 
 enum KeywordTokenFlags
@@ -476,9 +472,7 @@ struct TokenMapPair
     const char *TokenString;
     const uint32_t TokenFlags;
 };
-constexpr const TokenMapPair turtleBuiltinTokenMap[] = {
-    {"==", token::flag::ARITHMETIC_EQUAL_TO},
-    {"!=", token::flag::ARITHMETIC_NOT_EQUAL},
+constexpr TokenMapPair turtleBuiltinTokenMap[] = {
     {"+", token::flag::ARITHMETIC_ADD},
     {"-", token::flag::ARITHMETIC_SUB},
     {"*", token::flag::ARITHMETIC_MULL},
@@ -486,13 +480,15 @@ constexpr const TokenMapPair turtleBuiltinTokenMap[] = {
     {"%", token::flag::ARITHMETIC_MOD},
     {">", token::flag::ARITHMETIC_GREATER_THAN},
     {"<", token::flag::ARITHMETIC_LESS_THAN},
-    {"//", token::flag::ARITHMETIC_FLOOR},
-    {"**", token::flag::ARITHMETIC_EXPONENTIAL},
     {"&", token::flag::ARITHMETIC_BIT_AND},
     {"|", token::flag::ARITHMETIC_BIT_OR},
     {"^", token::flag::ARITHMETIC_BIT_XOR},
     {"~", token::flag::ARITHMETIC_BIT_NOT},
     {"!", token::flag::ARITHMETIC_NOT},
+    {"==", token::flag::ARITHMETIC_EQUAL_TO},
+    {"!=", token::flag::ARITHMETIC_NOT_EQUAL},
+    {"//", token::flag::ARITHMETIC_FLOOR},
+    {"**", token::flag::ARITHMETIC_EXPONENTIAL},
     {"<<", token::flag::ARITHMETIC_BIT_LEFT_SHIFT},
     {">>", token::flag::ARITHMETIC_BIT_LEFT_SHIFT},
     {"+=", token::flag::ARITHMETIC_ADD_ASSIGN},

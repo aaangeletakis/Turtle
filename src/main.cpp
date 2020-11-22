@@ -11,11 +11,19 @@
 
 int main(int argc, char *argv[]){
 
-    start(argc, argv);
+    //start(argc, argv);
 
-    std::string file;
-    getfile("test.py", file);
+    DocumentBucket Document;
+    //set explicit scope to deallocate file data and save memory
+    {
+        std::string file;
+        getfile("test.py", file);
+        getPhysicalLineTokens(file, Document);
+    }
 
+    //convert to logical lines
+    //aka look for ';'
+    convertToLogicalLines(Document);
     //Keep python logic and CPP separate in order to modulerize code to differing langs
 
     //pythonToJson(str){
