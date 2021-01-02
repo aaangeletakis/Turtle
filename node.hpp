@@ -477,37 +477,35 @@ namespace turtle
 
             enum ArithmeticTokenFlags
             {
-                ARITHMETIC_OPERATION = M_turtle_flag(token::ARITHMETIC_OPERATION) | flag::ARITHMETIC,
+                ARITHMETIC_OPERATION =       M_turtle_flag(token::ARITHMETIC_OPERATION)   | flag::ARITHMETIC,
 
-                ARITHMETIC_ADD = M_turtle_flag(token::ARITHMETIC_ADD) | flag::ARITHMETIC_OPERATION,
-                ARITHMETIC_SUB = M_turtle_flag(token::ARITHMETIC_SUB) | flag::ARITHMETIC_OPERATION,
-                ARITHMETIC_MULL = M_turtle_flag(token::ARITHMETIC_MULL) | flag::ARITHMETIC_OPERATION,
-                ARITHMETIC_DIV = M_turtle_flag(token::ARITHMETIC_DIV) | flag::ARITHMETIC_OPERATION,
-                ARITHMETIC_MOD = M_turtle_flag(token::ARITHMETIC_MOD) | flag::ARITHMETIC_OPERATION,
-                ARITHMETIC_FLOOR = M_turtle_flag(token::ARITHMETIC_FLOOR) | flag::ARITHMETIC_OPERATION,
-                ARITHMETIC_EXPONENTIAL = M_turtle_flag(token::ARITHMETIC_EXPONENTIAL) | flag::ARITHMETIC_OPERATION,
-                ARITHMETIC_BIT_AND = M_turtle_flag(token::ARITHMETIC_BIT_AND) | flag::ARITHMETIC_OPERATION,
-                ARITHMETIC_BIT_OR = M_turtle_flag(token::ARITHMETIC_BIT_OR) | flag::ARITHMETIC_OPERATION,
-                ARITHMETIC_BIT_XOR = M_turtle_flag(token::ARITHMETIC_BIT_XOR) | flag::ARITHMETIC_OPERATION,
-                ARITHMETIC_BIT_NOT = M_turtle_flag(token::ARITHMETIC_BIT_NOT) | flag::ARITHMETIC_OPERATION,
-                ARITHMETIC_BIT_LEFT_SHIFT =
-                    M_turtle_flag(token::ARITHMETIC_BIT_LEFT_SHIFT) | flag::ARITHMETIC_OPERATION,
-                ARITHMETIC_BIT_RIGHT_SHIFT =
-                    M_turtle_flag(token::ARITHMETIC_BIT_RIGHT_SHIFT) | flag::ARITHMETIC_OPERATION,
+                ARITHMETIC_ADD =             M_turtle_flag(token::ARITHMETIC_ADD)             | flag::ARITHMETIC_OPERATION,
+                ARITHMETIC_SUB =             M_turtle_flag(token::ARITHMETIC_SUB)             | flag::ARITHMETIC_OPERATION,
+                ARITHMETIC_MULL =            M_turtle_flag(token::ARITHMETIC_MULL)            | flag::ARITHMETIC_OPERATION,
+                ARITHMETIC_DIV =             M_turtle_flag(token::ARITHMETIC_DIV)             | flag::ARITHMETIC_OPERATION,
+                ARITHMETIC_MOD =             M_turtle_flag(token::ARITHMETIC_MOD)             | flag::ARITHMETIC_OPERATION,
+                ARITHMETIC_FLOOR =           M_turtle_flag(token::ARITHMETIC_FLOOR)           | flag::ARITHMETIC_OPERATION,
+                ARITHMETIC_EXPONENTIAL =     M_turtle_flag(token::ARITHMETIC_EXPONENTIAL)     | flag::ARITHMETIC_OPERATION,
+                ARITHMETIC_BIT_AND =         M_turtle_flag(token::ARITHMETIC_BIT_AND)         | flag::ARITHMETIC_OPERATION,
+                ARITHMETIC_BIT_OR =          M_turtle_flag(token::ARITHMETIC_BIT_OR)          | flag::ARITHMETIC_OPERATION,
+                ARITHMETIC_BIT_XOR =         M_turtle_flag(token::ARITHMETIC_BIT_XOR)         | flag::ARITHMETIC_OPERATION,
+                ARITHMETIC_BIT_NOT =         M_turtle_flag(token::ARITHMETIC_BIT_NOT)         | flag::ARITHMETIC_OPERATION,
+                ARITHMETIC_BIT_LEFT_SHIFT =  M_turtle_flag(token::ARITHMETIC_BIT_LEFT_SHIFT)  | flag::ARITHMETIC_OPERATION,
+                ARITHMETIC_BIT_RIGHT_SHIFT = M_turtle_flag(token::ARITHMETIC_BIT_RIGHT_SHIFT) | flag::ARITHMETIC_OPERATION,
 
-                ARITHMETIC_EQUAL_TO = M_turtle_flag(token::ARITHMETIC_EQUAL_TO) | flag::ARITHMETIC,
+                ARITHMETIC_EQUAL_TO =        M_turtle_flag(token::ARITHMETIC_EQUAL_TO)        | flag::ARITHMETIC,
 
-                ARITHMETIC_GREATER_THAN = M_turtle_flag(token::ARITHMETIC_GREATER_THAN) | flag::ARITHMETIC,
+                ARITHMETIC_NOT_EQUAL =       M_turtle_flag(token::ARITHMETIC_NOT)             | flag::ARITHMETIC_EQUAL_TO,
 
-                ARITHMETIC_LESS_THAN = M_turtle_flag(token::ARITHMETIC_LESS_THAN) | flag::ARITHMETIC,
+                ARITHMETIC_GREATER_THAN =    M_turtle_flag(token::ARITHMETIC_GREATER_THAN)    | flag::ARITHMETIC,
 
-                ARITHMETIC_NOT = M_turtle_flag(token::ARITHMETIC_NOT) | flag::ARITHMETIC,
+                ARITHMETIC_LESS_THAN =       M_turtle_flag(token::ARITHMETIC_LESS_THAN)       | flag::ARITHMETIC,
+
+                ARITHMETIC_NOT =             M_turtle_flag(token::ARITHMETIC_NOT)             | flag::ARITHMETIC,
 
                 ARITHMETIC_GREATER_THAN_EQUAL_TO = (flag::ARITHMETIC_EQUAL_TO | flag::ARITHMETIC_GREATER_THAN),
 
-                ARITHMETIC_LESS_THAN_EQUAL_TO = (flag::ARITHMETIC_EQUAL_TO | flag::ARITHMETIC_LESS_THAN),
-
-                ARITHMETIC_NOT_EQUAL = M_turtle_flag(token::ARITHMETIC_NOT) | flag::ARITHMETIC_EQUAL_TO,
+                ARITHMETIC_LESS_THAN_EQUAL_TO =    (flag::ARITHMETIC_EQUAL_TO | flag::ARITHMETIC_LESS_THAN),
             };
         } // namespace flag
 
@@ -520,74 +518,6 @@ namespace turtle
      * for a safer garentee that the program will run effectively,
      * efficently, and fast
     */
-
-    /*   enum tokenPairTokenNums{
-        keyword_MagicNum_ADD = 43,
-        keyword_MagicNum_SUB = 45,
-        keyword_MagicNum_MULL = 42,
-        keyword_MagicNum_DIV = 47,
-        keyword_MagicNum_MOD = 37,
-        keyword_MagicNum_GREATER_THAN = 62,
-        keyword_MagicNum_LESS_THAN = 60,
-        keyword_MagicNum_BIT_AND = 38,
-        keyword_MagicNum_BIT_OR = 124,
-        keyword_MagicNum_BIT_XOR = 94,
-        keyword_MagicNum_BIT_NOT = 126,
-        keyword_MagicNum_NOT = 33,
-        keyword_MagicNum_EQUAL_TO = 15677,
-        keyword_MagicNum_NOT_EQUAL = 8509,
-        keyword_MagicNum_FLOOR = 12079,
-        keyword_MagicNum_EXPONENTIAL = 10794,
-        keyword_MagicNum_LEFT_SHIFT = 15420,
-        keyword_MagicNum_RIGHT_SHIFT = 15934,
-        keyword_MagicNum_ADD_ASSIGN = 11069,
-        keyword_MagicNum_SUB_ASSIGN = 11581,
-        keyword_MagicNum_MULL_ASSIGN = 10813,
-        keyword_MagicNum_DIV_ASSIGN = 12093,
-        keyword_MagicNum_MOD_ASSIGN = 9533,
-        keyword_MagicNum_GREATER_THAN_EQUAL_TO = 15933,
-        keyword_MagicNum_LESS_THAN_EQUAL_TO = 15421,
-        keyword_MagicNum_FLOOR_ASSIGN = 3092285,
-        keyword_MagicNum_EXPONENTIAL_ASSIGN = 2763325,
-        keyword_MagicNum_BIT_AND_ASSIGN = 9789,
-        keyword_MagicNum_BIT_OR_ASSIGN = 31805,
-        keyword_MagicNum_BIT_XOR_ASSIGN = 24125,
-        keyword_MagicNum_BIT_LEFT_SHIFT_ASSIGN = 3947581,
-        keyword_MagicNum_BIT_RIGHT_SHIFT_ASSIGN = 4079165,
-        keyword_MagicNum_False = 302282208101,
-        keyword_MagicNum_class = 427020088179,
-        keyword_MagicNum_finally = 28826370426301561,
-        keyword_MagicNum_is = 26995,
-        keyword_MagicNum_return = 125780071117422,
-        keyword_MagicNum_None = 1315925605,
-        keyword_MagicNum_continue = 7165066978433856869,
-        keyword_MagicNum_for = 6713202,
-        keyword_MagicNum_lambda = 119165702792289,
-        keyword_MagicNum_try = 7631481,
-        keyword_MagicNum_True = 1416787301,
-        keyword_MagicNum_def = 6579558,
-        keyword_MagicNum_from = 1718775661,
-        keyword_MagicNum_nonlocal = 7957700478591263084,
-        keyword_MagicNum_while = 512852847717,
-        keyword_MagicNum_and = 6385252,
-        keyword_MagicNum_del = 6579564,
-        keyword_MagicNum_global = 113715422847340,
-        keyword_MagicNum_not = 7237492,
-        keyword_MagicNum_with = 2003399784,
-        keyword_MagicNum_as = 24947,
-        keyword_MagicNum_elif = 1701603686,
-        keyword_MagicNum_if = 26982,
-        keyword_MagicNum_or = 28530,
-        keyword_MagicNum_yield = 521459297380,
-        keyword_MagicNum_assert = 107148485161588,
-        keyword_MagicNum_else = 1701606245,
-        keyword_MagicNum_import = 115918758703732,
-        keyword_MagicNum_pass = 1885434739,
-        keyword_MagicNum_break = 422826041707,
-        keyword_MagicNum_except = 111567738073204,
-        keyword_MagicNum_in = 26990,
-        keyword_MagicNum_raise = 491260572517
-    };*/
 
     constexpr uint_fast64_t turtleBuiltinTokenMap[][2] = {
         {sti("="), token::flag::DELIMITER_ASSIGN},
