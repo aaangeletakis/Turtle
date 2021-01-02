@@ -15,4 +15,5 @@ HEADERS += \
     node.hpp \
     token.hpp
 DISTFILES += \
+    README.md \
     test.py
