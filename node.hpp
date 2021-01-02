@@ -46,7 +46,7 @@
 #include <string.h>
 #include "global.h"
 
-//In case I want to change it to something bigger/smaller in the future
+//In case I want to change it to something bigger in the future
 typedef uint32_t turtle_flag;
 
 //      M_turtle_flag(N) (00000000 00000000 00000000 00000001 <<  N )
@@ -70,20 +70,6 @@ struct Node
 
 namespace turtle
 {
-
-    struct TokenDataStructure
-    {
-        /*const unsigned int LineNumber;*/
-
-        /*
-         * Number of whitespace
-         * const unsigned int Scope;
-         */
-
-        turtle_flag TokenFlags = 0;
-        std::string TokenString;
-    };
-
     //std::vector<struct Node> SyntaxGroups
     //         ||
     //         \/
@@ -352,49 +338,41 @@ namespace turtle
 //offset the arithmetic tokens to be next to the DELIMITER_ASSIGN token
 #define DeliminarAssignOffset_M(x) (x << (token::DELIMITER_ASSIGN + 1))
 
-                ARITHMETIC_ADD_ASSIGN =  DeliminarAssignOffset_M(token::ARITHMETIC_ADD)   | flag::DELIMITER_ASSIGN,
-                ARITHMETIC_SUB_ASSIGN =  DeliminarAssignOffset_M(token::ARITHMETIC_SUB)   | flag::DELIMITER_ASSIGN,
-                ARITHMETIC_MULL_ASSIGN = DeliminarAssignOffset_M(token::ARITHMETIC_MULL)  | flag::DELIMITER_ASSIGN,
-                ARITHMETIC_DIV_ASSIGN =  DeliminarAssignOffset_M(token::ARITHMETIC_DIV)   | flag::DELIMITER_ASSIGN,
-                ARITHMETIC_MOD_ASSIGN =  DeliminarAssignOffset_M(token::ARITHMETIC_MOD)   | flag::DELIMITER_ASSIGN,
-                ARITHMETIC_FLOOR_ASSIGN = token::ARITHMETIC_FLOOR << (token::DELIMITER_ASSIGN + 1) |
-                                           flag::DELIMITER_ASSIGN,
-                ARITHMETIC_EXPONENTIAL_ASSIGN = (token::ARITHMETIC_EXPONENTIAL << (token::DELIMITER_ASSIGN + 1) |
-                                                 flag::DELIMITER_ASSIGN),
-                ARITHMETIC_BIT_AND_ASSIGN = (token::ARITHMETIC_BIT_AND << (token::DELIMITER_ASSIGN + 1) |
-                                             flag::DELIMITER_ASSIGN),
-                ARITHMETIC_BIT_OR_ASSIGN = (token::ARITHMETIC_BIT_OR << (token::DELIMITER_ASSIGN + 1) |
-                                            flag::DELIMITER_ASSIGN),
-                ARITHMETIC_BIT_XOR_ASSIGN = (token::ARITHMETIC_BIT_XOR << (token::DELIMITER_ASSIGN + 1) |
-                                             flag::DELIMITER_ASSIGN),
-                ARITHMETIC_BIT_LEFT_SHIFT_ASSIGN = (token::ARITHMETIC_BIT_LEFT_SHIFT << (token::DELIMITER_ASSIGN + 1) |
-                                                    flag::DELIMITER_ASSIGN),
-                ARITHMETIC_BIT_RIGHT_SHIFT_ASSIGN = (token::ARITHMETIC_BIT_RIGHT_SHIFT << (token::DELIMITER_ASSIGN + 1) | flag::DELIMITER_ASSIGN),
+                ARITHMETIC_ADD_ASSIGN =             DeliminarAssignOffset_M(token::ARITHMETIC_ADD)             | flag::DELIMITER_ASSIGN,
+                ARITHMETIC_SUB_ASSIGN =             DeliminarAssignOffset_M(token::ARITHMETIC_SUB)             | flag::DELIMITER_ASSIGN,
+                ARITHMETIC_MULL_ASSIGN =            DeliminarAssignOffset_M(token::ARITHMETIC_MULL)            | flag::DELIMITER_ASSIGN,
+                ARITHMETIC_DIV_ASSIGN =             DeliminarAssignOffset_M(token::ARITHMETIC_DIV)             | flag::DELIMITER_ASSIGN,
+                ARITHMETIC_MOD_ASSIGN =             DeliminarAssignOffset_M(token::ARITHMETIC_MOD)             | flag::DELIMITER_ASSIGN,
+                ARITHMETIC_FLOOR_ASSIGN =           DeliminarAssignOffset_M(token::ARITHMETIC_FLOOR)           | flag::DELIMITER_ASSIGN,
+                ARITHMETIC_EXPONENTIAL_ASSIGN =     DeliminarAssignOffset_M(token::ARITHMETIC_EXPONENTIAL)     | flag::DELIMITER_ASSIGN,
+                ARITHMETIC_BIT_AND_ASSIGN =         DeliminarAssignOffset_M(token::ARITHMETIC_BIT_AND)         | flag::DELIMITER_ASSIGN,
+                ARITHMETIC_BIT_OR_ASSIGN =          DeliminarAssignOffset_M(token::ARITHMETIC_BIT_OR)          | flag::DELIMITER_ASSIGN,
+                ARITHMETIC_BIT_XOR_ASSIGN =         DeliminarAssignOffset_M(token::ARITHMETIC_BIT_XOR)         | flag::DELIMITER_ASSIGN,
+                ARITHMETIC_BIT_LEFT_SHIFT_ASSIGN =  DeliminarAssignOffset_M(token::ARITHMETIC_BIT_LEFT_SHIFT)  | flag::DELIMITER_ASSIGN,
+                ARITHMETIC_BIT_RIGHT_SHIFT_ASSIGN = DeliminarAssignOffset_M(token::ARITHMETIC_BIT_RIGHT_SHIFT) | flag::DELIMITER_ASSIGN,
 
 #undef DeliminarAssignOffset_M
 
-                DELIMITER_AT_SIGN =            M_turtle_flag(token::DELIMITER_AT_SIGN)              | flag::DELIMITERS,
-                DELIMITER_COLON =              M_turtle_flag(token::DELIMITER_COLON)                | flag::DELIMITERS,
-                DELIMITER_SEMICOLON =          M_turtle_flag(token::DELIMITER_SEMICOLON)            | flag::DELIMITERS,
-                DELIMITER_COMMA =              M_turtle_flag(token::DELIMITER_COMMA)                | flag::DELIMITERS,
-                DELIMITER_PERIOD =             M_turtle_flag(token::DELIMITER_PERIOD)               | flag::DELIMITERS,
+                DELIMITER_AT_SIGN =                 M_turtle_flag(token::DELIMITER_AT_SIGN)                    | flag::DELIMITERS,
+                DELIMITER_COLON =                   M_turtle_flag(token::DELIMITER_COLON)                      | flag::DELIMITERS,
+                DELIMITER_SEMICOLON =               M_turtle_flag(token::DELIMITER_SEMICOLON)                  | flag::DELIMITERS,
+                DELIMITER_COMMA =                   M_turtle_flag(token::DELIMITER_COMMA)                      | flag::DELIMITERS,
+                DELIMITER_PERIOD =                  M_turtle_flag(token::DELIMITER_PERIOD)                     | flag::DELIMITERS,
+                DELIMITER_ACCESS =                                                                               DELIMITER_PERIOD,
 
-                DELIMITER_BRACE =              M_turtle_flag(token::DELIMITER_BRACE)                | flag::DELIMITERS,
-                DELIMITER_LEFT_BRACE =         M_turtle_flag(token::DELIMITER_LEFT_OR_RIGHT_BRACE)  | flag::DELIMITERS, // 1 = Left, 0 = Right
+                DELIMITER_BRACE =                   M_turtle_flag(token::DELIMITER_BRACE)                      | flag::DELIMITERS,
+                DELIMITER_LEFT_BRACE =              M_turtle_flag(token::DELIMITER_LEFT_OR_RIGHT_BRACE)        | flag::DELIMITERS, // 1 = Left, 0 = Right
 
-                DELIMITER_CURVED_BRACE =       M_turtle_flag(token::DELIMITER_CURVED_BRACE)         | flag::DELIMITERS,
-                DELIMITER_SQUARE_BRACE =       M_turtle_flag(token::DELIMITER_SQUARE_BRACE)         | flag::DELIMITERS,
-                DELIMITER_CURLY_BRACE =        M_turtle_flag(token::DELIMITER_CURLY_BRACE)          | flag::DELIMITERS,
+                DELIMITER_CURVED_BRACE =            M_turtle_flag(token::DELIMITER_CURVED_BRACE)               | flag::DELIMITERS,
+                DELIMITER_SQUARE_BRACE =            M_turtle_flag(token::DELIMITER_SQUARE_BRACE)               | flag::DELIMITERS,
+                DELIMITER_CURLY_BRACE =             M_turtle_flag(token::DELIMITER_CURLY_BRACE)                | flag::DELIMITERS,
 
-                DELIMITER_CURVED_RIGHT_BRACE = (DELIMITER_CURVED_BRACE                        | DELIMITER_BRACE),
-                DELIMITER_CURVED_LEFT_BRACE =  (DELIMITER_CURVED_BRACE | DELIMITER_LEFT_BRACE | DELIMITER_BRACE),
-                DELIMITER_SQUARE_RIGHT_BRACE = (DELIMITER_SQUARE_BRACE                        | DELIMITER_BRACE),
-                DELIMITER_SQUARE_LEFT_BRACE =  (DELIMITER_SQUARE_BRACE | DELIMITER_LEFT_BRACE | DELIMITER_BRACE),
-                DELIMITER_CURLY_RIGHT_BRACE =  (DELIMITER_CURLY_BRACE                         | DELIMITER_BRACE),
-                DELIMITER_CURLY_LEFT_BRACE =   (DELIMITER_CURLY_BRACE  | DELIMITER_LEFT_BRACE | DELIMITER_BRACE),
-
-
-                //DELIMITER_ACCESS = M_turtle_flag(token::DELIMITER_ACCESS) | flag::DELIMITERS,
+                DELIMITER_CURVED_RIGHT_BRACE =      (DELIMITER_CURVED_BRACE                        | DELIMITER_BRACE),
+                DELIMITER_CURVED_LEFT_BRACE =       (DELIMITER_CURVED_BRACE | DELIMITER_LEFT_BRACE | DELIMITER_BRACE),
+                DELIMITER_SQUARE_RIGHT_BRACE =      (DELIMITER_SQUARE_BRACE                        | DELIMITER_BRACE),
+                DELIMITER_SQUARE_LEFT_BRACE =       (DELIMITER_SQUARE_BRACE | DELIMITER_LEFT_BRACE | DELIMITER_BRACE),
+                DELIMITER_CURLY_RIGHT_BRACE =       (DELIMITER_CURLY_BRACE                         | DELIMITER_BRACE),
+                DELIMITER_CURLY_LEFT_BRACE =        (DELIMITER_CURLY_BRACE  | DELIMITER_LEFT_BRACE | DELIMITER_BRACE),
             };
 
             enum KeywordTokenFlags
@@ -456,31 +434,31 @@ namespace turtle
 
             enum ArithmeticTokenFlags
             {
-                ARITHMETIC_OPERATION =       M_turtle_flag(token::ARITHMETIC_OPERATION)       | flag::ARITHMETIC,
+                ARITHMETIC_OPERATION =             M_turtle_flag(token::ARITHMETIC_OPERATION)       | flag::ARITHMETIC,
 
-                ARITHMETIC_ADD =             M_turtle_flag(token::ARITHMETIC_ADD)             | flag::ARITHMETIC_OPERATION,
-                ARITHMETIC_SUB =             M_turtle_flag(token::ARITHMETIC_SUB)             | flag::ARITHMETIC_OPERATION,
-                ARITHMETIC_MULL =            M_turtle_flag(token::ARITHMETIC_MULL)            | flag::ARITHMETIC_OPERATION,
-                ARITHMETIC_DIV =             M_turtle_flag(token::ARITHMETIC_DIV)             | flag::ARITHMETIC_OPERATION,
-                ARITHMETIC_MOD =             M_turtle_flag(token::ARITHMETIC_MOD)             | flag::ARITHMETIC_OPERATION,
-                ARITHMETIC_FLOOR =           M_turtle_flag(token::ARITHMETIC_FLOOR)           | flag::ARITHMETIC_OPERATION,
-                ARITHMETIC_EXPONENTIAL =     M_turtle_flag(token::ARITHMETIC_EXPONENTIAL)     | flag::ARITHMETIC_OPERATION,
-                ARITHMETIC_BIT_AND =         M_turtle_flag(token::ARITHMETIC_BIT_AND)         | flag::ARITHMETIC_OPERATION,
-                ARITHMETIC_BIT_OR =          M_turtle_flag(token::ARITHMETIC_BIT_OR)          | flag::ARITHMETIC_OPERATION,
-                ARITHMETIC_BIT_XOR =         M_turtle_flag(token::ARITHMETIC_BIT_XOR)         | flag::ARITHMETIC_OPERATION,
-                ARITHMETIC_BIT_NOT =         M_turtle_flag(token::ARITHMETIC_BIT_NOT)         | flag::ARITHMETIC_OPERATION,
-                ARITHMETIC_BIT_LEFT_SHIFT =  M_turtle_flag(token::ARITHMETIC_BIT_LEFT_SHIFT)  | flag::ARITHMETIC_OPERATION,
-                ARITHMETIC_BIT_RIGHT_SHIFT = M_turtle_flag(token::ARITHMETIC_BIT_RIGHT_SHIFT) | flag::ARITHMETIC_OPERATION,
+                ARITHMETIC_ADD =                   M_turtle_flag(token::ARITHMETIC_ADD)             | flag::ARITHMETIC_OPERATION,
+                ARITHMETIC_SUB =                   M_turtle_flag(token::ARITHMETIC_SUB)             | flag::ARITHMETIC_OPERATION,
+                ARITHMETIC_MULL =                  M_turtle_flag(token::ARITHMETIC_MULL)            | flag::ARITHMETIC_OPERATION,
+                ARITHMETIC_DIV =                   M_turtle_flag(token::ARITHMETIC_DIV)             | flag::ARITHMETIC_OPERATION,
+                ARITHMETIC_MOD =                   M_turtle_flag(token::ARITHMETIC_MOD)             | flag::ARITHMETIC_OPERATION,
+                ARITHMETIC_FLOOR =                 M_turtle_flag(token::ARITHMETIC_FLOOR)           | flag::ARITHMETIC_OPERATION,
+                ARITHMETIC_EXPONENTIAL =           M_turtle_flag(token::ARITHMETIC_EXPONENTIAL)     | flag::ARITHMETIC_OPERATION,
+                ARITHMETIC_BIT_AND =               M_turtle_flag(token::ARITHMETIC_BIT_AND)         | flag::ARITHMETIC_OPERATION,
+                ARITHMETIC_BIT_OR =                M_turtle_flag(token::ARITHMETIC_BIT_OR)          | flag::ARITHMETIC_OPERATION,
+                ARITHMETIC_BIT_XOR =               M_turtle_flag(token::ARITHMETIC_BIT_XOR)         | flag::ARITHMETIC_OPERATION,
+                ARITHMETIC_BIT_NOT =               M_turtle_flag(token::ARITHMETIC_BIT_NOT)         | flag::ARITHMETIC_OPERATION,
+                ARITHMETIC_BIT_LEFT_SHIFT =        M_turtle_flag(token::ARITHMETIC_BIT_LEFT_SHIFT)  | flag::ARITHMETIC_OPERATION,
+                ARITHMETIC_BIT_RIGHT_SHIFT =       M_turtle_flag(token::ARITHMETIC_BIT_RIGHT_SHIFT) | flag::ARITHMETIC_OPERATION,
 
-                ARITHMETIC_EQUAL_TO =        M_turtle_flag(token::ARITHMETIC_EQUAL_TO)        | flag::ARITHMETIC,
+                ARITHMETIC_EQUAL_TO =              M_turtle_flag(token::ARITHMETIC_EQUAL_TO)        | flag::ARITHMETIC,
 
-                ARITHMETIC_NOT_EQUAL =       M_turtle_flag(token::ARITHMETIC_NOT)             | flag::ARITHMETIC_EQUAL_TO,
+                ARITHMETIC_NOT_EQUAL =             M_turtle_flag(token::ARITHMETIC_NOT)             | flag::ARITHMETIC_EQUAL_TO,
 
-                ARITHMETIC_GREATER_THAN =    M_turtle_flag(token::ARITHMETIC_GREATER_THAN)    | flag::ARITHMETIC,
+                ARITHMETIC_GREATER_THAN =          M_turtle_flag(token::ARITHMETIC_GREATER_THAN)    | flag::ARITHMETIC,
 
-                ARITHMETIC_LESS_THAN =       M_turtle_flag(token::ARITHMETIC_LESS_THAN)       | flag::ARITHMETIC,
+                ARITHMETIC_LESS_THAN =             M_turtle_flag(token::ARITHMETIC_LESS_THAN)       | flag::ARITHMETIC,
 
-                ARITHMETIC_NOT =             M_turtle_flag(token::ARITHMETIC_NOT)             | flag::ARITHMETIC,
+                ARITHMETIC_NOT =                   M_turtle_flag(token::ARITHMETIC_NOT)             | flag::ARITHMETIC,
 
                 ARITHMETIC_GREATER_THAN_EQUAL_TO = (flag::ARITHMETIC_EQUAL_TO | flag::ARITHMETIC_GREATER_THAN),
 
@@ -499,74 +477,77 @@ namespace turtle
     */
 
     constexpr uint_fast64_t turtleBuiltinTokenMap[][2] = {
-        {sti("="), token::flag::DELIMITER_ASSIGN},
-        {sti("+"), token::flag::ARITHMETIC_ADD},
-        {sti("-"), token::flag::ARITHMETIC_SUB},
-        {sti("*"), token::flag::ARITHMETIC_MULL},
-        {sti("/"), token::flag::ARITHMETIC_DIV},
-        {sti("%"), token::flag::ARITHMETIC_MOD},
-        {sti(">"), token::flag::ARITHMETIC_GREATER_THAN},
-        {sti("<"), token::flag::ARITHMETIC_LESS_THAN},
-        {sti("&"), token::flag::ARITHMETIC_BIT_AND},
-        {sti("|"), token::flag::ARITHMETIC_BIT_OR},
-        {sti("^"), token::flag::ARITHMETIC_BIT_XOR},
-        {sti("~"), token::flag::ARITHMETIC_BIT_NOT},
-        {sti("!"), token::flag::ARITHMETIC_NOT},
-        {sti("=="), token::flag::ARITHMETIC_EQUAL_TO},
-        {sti("!="), token::flag::ARITHMETIC_NOT_EQUAL},
-        {sti("//"), token::flag::ARITHMETIC_FLOOR},
-        {sti("**"), token::flag::ARITHMETIC_EXPONENTIAL},
-        {sti("<<"), token::flag::ARITHMETIC_BIT_LEFT_SHIFT},
-        {sti(">>"), token::flag::ARITHMETIC_BIT_LEFT_SHIFT},
-        {sti("+="), token::flag::ARITHMETIC_ADD_ASSIGN},
-        {sti("-="), token::flag::ARITHMETIC_SUB_ASSIGN},
-        {sti("*="), token::flag::ARITHMETIC_MULL_ASSIGN},
-        {sti("/="), token::flag::ARITHMETIC_DIV_ASSIGN},
-        {sti("%="), token::flag::ARITHMETIC_MOD_ASSIGN},
-        {sti(">="), token::flag::ARITHMETIC_GREATER_THAN_EQUAL_TO},
-        {sti("<="), token::flag::ARITHMETIC_LESS_THAN_EQUAL_TO},
-        {sti("//="), token::flag::ARITHMETIC_FLOOR_ASSIGN},
-        {sti("**="), token::flag::ARITHMETIC_EXPONENTIAL_ASSIGN},
-        {sti("&="), token::flag::ARITHMETIC_BIT_AND_ASSIGN},
-        {sti("|="), token::flag::ARITHMETIC_BIT_OR_ASSIGN},
-        {sti("^="), token::flag::ARITHMETIC_BIT_XOR_ASSIGN},
-        //"~=" operator does not exist
-        {sti("<<="), token::flag::ARITHMETIC_BIT_LEFT_SHIFT_ASSIGN},
-        {sti(">>="), token::flag::ARITHMETIC_BIT_RIGHT_SHIFT_ASSIGN},
+        {sti("="),        token::flag::DELIMITER_ASSIGN},
+        {sti("+"),        token::flag::ARITHMETIC_ADD},
+        {sti("-"),        token::flag::ARITHMETIC_SUB},
+        {sti("*"),        token::flag::ARITHMETIC_MULL},
+        {sti("/"),        token::flag::ARITHMETIC_DIV},
+        {sti("%"),        token::flag::ARITHMETIC_MOD},
+        {sti(">"),        token::flag::ARITHMETIC_GREATER_THAN},
+        {sti("<"),        token::flag::ARITHMETIC_LESS_THAN},
+        {sti("&"),        token::flag::ARITHMETIC_BIT_AND},
+        {sti("|"),        token::flag::ARITHMETIC_BIT_OR},
+        {sti("^"),        token::flag::ARITHMETIC_BIT_XOR},
+        {sti("~"),        token::flag::ARITHMETIC_BIT_NOT},
+        {sti("!"),        token::flag::ARITHMETIC_NOT},
+        {sti("=="),       token::flag::ARITHMETIC_EQUAL_TO},
+        {sti("!="),       token::flag::ARITHMETIC_NOT_EQUAL},
+        {sti("//"),       token::flag::ARITHMETIC_FLOOR},
+        {sti("**"),       token::flag::ARITHMETIC_EXPONENTIAL},
+        {sti("<<"),       token::flag::ARITHMETIC_BIT_LEFT_SHIFT},
+        {sti(">>"),       token::flag::ARITHMETIC_BIT_LEFT_SHIFT},
+        {sti("+="),       token::flag::ARITHMETIC_ADD_ASSIGN},
+        {sti("-="),       token::flag::ARITHMETIC_SUB_ASSIGN},
+        {sti("*="),       token::flag::ARITHMETIC_MULL_ASSIGN},
+        {sti("/="),       token::flag::ARITHMETIC_DIV_ASSIGN},
+        {sti("%="),       token::flag::ARITHMETIC_MOD_ASSIGN},
+        {sti(">="),       token::flag::ARITHMETIC_GREATER_THAN_EQUAL_TO},
+        {sti("<="),       token::flag::ARITHMETIC_LESS_THAN_EQUAL_TO},
+        {sti("//="),      token::flag::ARITHMETIC_FLOOR_ASSIGN},
+        {sti("**="),      token::flag::ARITHMETIC_EXPONENTIAL_ASSIGN},
+        {sti("&="),       token::flag::ARITHMETIC_BIT_AND_ASSIGN},
+        {sti("|="),       token::flag::ARITHMETIC_BIT_OR_ASSIGN},
+        {sti("^="),       token::flag::ARITHMETIC_BIT_XOR_ASSIGN},
 
-        {sti("False"), token::flag::KEYWORD_FALSE},
-        {sti("True"), token::flag::KEYWORD_TRUE},
-        {sti("class"), token::flag::KEYWORD_CLASS},
-        {sti("finally"), token::flag::KEYWORD_FINALLY},
-        {sti("is"), token::flag::KEYWORD_IS},
-        {sti("return"), token::flag::KEYWORD_RETURN},
-        {sti("None"), token::flag::KEYWORD_NONE},
+        //"~=" operator does not exist in python
+
+        {sti("<<="),      token::flag::ARITHMETIC_BIT_LEFT_SHIFT_ASSIGN},
+        {sti(">>="),      token::flag::ARITHMETIC_BIT_RIGHT_SHIFT_ASSIGN},
+
+        {sti("False"),    token::flag::KEYWORD_FALSE},
+        {sti("True"),     token::flag::KEYWORD_TRUE},
+        {sti("class"),    token::flag::KEYWORD_CLASS},
+        {sti("finally"),  token::flag::KEYWORD_FINALLY},
+        {sti("is"),       token::flag::KEYWORD_IS},
+        {sti("return"),   token::flag::KEYWORD_RETURN},
+        {sti("None"),     token::flag::KEYWORD_NONE},
         {sti("continue"), token::flag::KEYWORD_CONTINUE},
-        {sti("for"), token::flag::KEYWORD_FOR},
-        {sti("lambda"), token::flag::KEYWORD_LAMBDA},
-        {sti("try"), token::flag::KEYWORD_TRY},
-        {sti("def"), token::flag::KEYWORD_DEF},
-        {sti("from"), token::flag::KEYWORD_FROM},
+        {sti("for"),      token::flag::KEYWORD_FOR},
+        {sti("lambda"),   token::flag::KEYWORD_LAMBDA},
+        {sti("try"),      token::flag::KEYWORD_TRY},
+        {sti("def"),      token::flag::KEYWORD_DEF},
+        {sti("from"),     token::flag::KEYWORD_FROM},
         {sti("nonlocal"), token::flag::KEYWORD_NONLOCAL},
-        {sti("while"), token::flag::KEYWORD_WHILE},
-        {sti("and"), token::flag::KEYWORD_AND},
-        {sti("del"), token::flag::KEYWORD_DEL},
-        {sti("global"), token::flag::KEYWORD_GLOBAL},
-        {sti("not"), token::flag::KEYWORD_NOT},
-        {sti("with"), token::flag::KEYWORD_WITH},
-        {sti("as"), token::flag::KEYWORD_AS},
-        {sti("elif"), token::flag::KEYWORD_ELIF},
-        {sti("if"), token::flag::KEYWORD_IF},
-        {sti("or"), token::flag::KEYWORD_OR},
-        {sti("yield"), token::flag::KEYWORD_YIELD},
-        {sti("assert"), token::flag::KEYWORD_ASSERT},
-        {sti("else"), token::flag::KEYWORD_ELSE},
-        {sti("import"), token::flag::KEYWORD_IMPORT},
-        {sti("pass"), token::flag::KEYWORD_PASS},
-        {sti("break"), token::flag::KEYWORD_BREAK},
-        {sti("except"), token::flag::KEYWORD_EXCEPT},
-        {sti("in"), token::flag::KEYWORD_IN},
-        {sti("raise"), token::flag::KEYWORD_RAISE}};
+        {sti("while"),    token::flag::KEYWORD_WHILE},
+        {sti("and"),      token::flag::KEYWORD_AND},
+        {sti("del"),      token::flag::KEYWORD_DEL},
+        {sti("global"),   token::flag::KEYWORD_GLOBAL},
+        {sti("not"),      token::flag::KEYWORD_NOT},
+        {sti("with"),     token::flag::KEYWORD_WITH},
+        {sti("as"),       token::flag::KEYWORD_AS},
+        {sti("elif"),     token::flag::KEYWORD_ELIF},
+        {sti("if"),       token::flag::KEYWORD_IF},
+        {sti("or"),       token::flag::KEYWORD_OR},
+        {sti("yield"),    token::flag::KEYWORD_YIELD},
+        {sti("assert"),   token::flag::KEYWORD_ASSERT},
+        {sti("else"),     token::flag::KEYWORD_ELSE},
+        {sti("import"),   token::flag::KEYWORD_IMPORT},
+        {sti("pass"),     token::flag::KEYWORD_PASS},
+        {sti("break"),    token::flag::KEYWORD_BREAK},
+        {sti("except"),   token::flag::KEYWORD_EXCEPT},
+        {sti("in"),       token::flag::KEYWORD_IN},
+        {sti("raise"),    token::flag::KEYWORD_RAISE}};
+
     //return token flag
     turtle_flag findKeyword(const char *__restrict str)
     {
@@ -581,7 +562,7 @@ namespace turtle
                 }
             }
         }
-        return 0;
+        return token::flag::NULL_TOKEN;
     }
 } // namespace turtle
 
