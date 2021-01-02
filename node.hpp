@@ -222,7 +222,7 @@ namespace turtle
         namespace flag
         {
 
-            /*
+/*
  * Below are the precomputed flags
  * 
  * This program strives for low memeory use at the cost of speed
@@ -242,27 +242,6 @@ namespace turtle
  * If the token is not an IDENTIFIER, The token
  * types 2-6 will have a numeric id that can be extracted via
  *      (TokenFlag >> ( ( sizeof(TURTLES_FLAG_DATA_TYPE) * 8 ) - 4 ) )
- * 
- * This will make it possible to do:
- * 
- * if(TokenFlag not IDENTIFIER (i.e. the MSB is not set) ){
- *      switch(TokenFlag >> (32 bits - 4) ){
- *          case DELIMITERS:
- *          case ARITHMETIC:
- *          case KEYWORD:
- *          case DATA:
- *      }
- * }
- * 
- * or even
- * 
- * int tmp=0;
- * tmpTokenType += (TokenFlag >> (32 bits - 4) );
- * if( tmpTokenType != IDENTIFIER ){
- *      switch(tmpTokenType){
- *          ...
- *      }
- * }
  */
 
             enum tokenTypeFlags
@@ -296,7 +275,7 @@ namespace turtle
             enum ControlTypeFlags
             {
                 NULL_TOKEN = M_turtle_flag(token::NULL_TOKEN) | flag::CONTROL,
-                NEWLINE = M_turtle_flag(token::NEWLINE) | flag::CONTROL,
+                NEWLINE =    M_turtle_flag(token::NEWLINE)    | flag::CONTROL,
             };
 
             /*
@@ -368,20 +347,18 @@ namespace turtle
 
             enum OperatorTypeTokensFlags
             {
-                //01 -> 00000000 00000001
-                DELIMITER_ASSIGN = M_turtle_flag(token::DELIMITER_ASSIGN) | flag::DELIMITERS,
-                ARITHMETIC_ADD_ASSIGN = (token::ARITHMETIC_ADD << (token::DELIMITER_ASSIGN + 1) |
-                                         flag::DELIMITER_ASSIGN),
-                ARITHMETIC_SUB_ASSIGN = (token::ARITHMETIC_SUB << (token::DELIMITER_ASSIGN + 1) |
-                                         flag::DELIMITER_ASSIGN),
-                ARITHMETIC_MULL_ASSIGN = (token::ARITHMETIC_MULL << (token::DELIMITER_ASSIGN + 1) |
-                                          flag::DELIMITER_ASSIGN),
-                ARITHMETIC_DIV_ASSIGN = (token::ARITHMETIC_DIV << (token::DELIMITER_ASSIGN + 1) |
-                                         flag::DELIMITER_ASSIGN),
-                ARITHMETIC_MOD_ASSIGN = (token::ARITHMETIC_MOD << (token::DELIMITER_ASSIGN + 1) |
-                                         flag::DELIMITER_ASSIGN),
-                ARITHMETIC_FLOOR_ASSIGN = (token::ARITHMETIC_FLOOR << (token::DELIMITER_ASSIGN + 1) |
-                                           flag::DELIMITER_ASSIGN),
+                DELIMITER_ASSIGN =              M_turtle_flag(token::DELIMITER_ASSIGN) | flag::DELIMITERS,
+
+//offset the arithmetic tokens to be next to the DELIMITER_ASSIGN token
+#define DeliminarAssignOffset_M(x) (x << (token::DELIMITER_ASSIGN + 1))
+
+                ARITHMETIC_ADD_ASSIGN =  DeliminarAssignOffset_M(token::ARITHMETIC_ADD)   | flag::DELIMITER_ASSIGN,
+                ARITHMETIC_SUB_ASSIGN =  DeliminarAssignOffset_M(token::ARITHMETIC_SUB)   | flag::DELIMITER_ASSIGN,
+                ARITHMETIC_MULL_ASSIGN = DeliminarAssignOffset_M(token::ARITHMETIC_MULL)  | flag::DELIMITER_ASSIGN,
+                ARITHMETIC_DIV_ASSIGN =  DeliminarAssignOffset_M(token::ARITHMETIC_DIV)   | flag::DELIMITER_ASSIGN,
+                ARITHMETIC_MOD_ASSIGN =  DeliminarAssignOffset_M(token::ARITHMETIC_MOD)   | flag::DELIMITER_ASSIGN,
+                ARITHMETIC_FLOOR_ASSIGN = token::ARITHMETIC_FLOOR << (token::DELIMITER_ASSIGN + 1) |
+                                           flag::DELIMITER_ASSIGN,
                 ARITHMETIC_EXPONENTIAL_ASSIGN = (token::ARITHMETIC_EXPONENTIAL << (token::DELIMITER_ASSIGN + 1) |
                                                  flag::DELIMITER_ASSIGN),
                 ARITHMETIC_BIT_AND_ASSIGN = (token::ARITHMETIC_BIT_AND << (token::DELIMITER_ASSIGN + 1) |
@@ -394,14 +371,20 @@ namespace turtle
                                                     flag::DELIMITER_ASSIGN),
                 ARITHMETIC_BIT_RIGHT_SHIFT_ASSIGN = (token::ARITHMETIC_BIT_RIGHT_SHIFT << (token::DELIMITER_ASSIGN + 1) | flag::DELIMITER_ASSIGN),
 
-                DELIMITER_BRACE = M_turtle_flag(token::DELIMITER_BRACE) | flag::DELIMITERS,
+#undef DeliminarAssignOffset_M
 
-                DELIMITER_LEFT_BRACE =
-                    M_turtle_flag(token::DELIMITER_LEFT_OR_RIGHT_BRACE) | flag::DELIMITERS, // 1 = Left, 0 = Right
+                DELIMITER_AT_SIGN =            M_turtle_flag(token::DELIMITER_AT_SIGN)              | flag::DELIMITERS,
+                DELIMITER_COLON =              M_turtle_flag(token::DELIMITER_COLON)                | flag::DELIMITERS,
+                DELIMITER_SEMICOLON =          M_turtle_flag(token::DELIMITER_SEMICOLON)            | flag::DELIMITERS,
+                DELIMITER_COMMA =              M_turtle_flag(token::DELIMITER_COMMA)                | flag::DELIMITERS,
+                DELIMITER_PERIOD =             M_turtle_flag(token::DELIMITER_PERIOD)               | flag::DELIMITERS,
 
-                DELIMITER_CURVED_BRACE = M_turtle_flag(token::DELIMITER_CURVED_BRACE) | flag::DELIMITERS,
-                DELIMITER_SQUARE_BRACE = M_turtle_flag(token::DELIMITER_SQUARE_BRACE) | flag::DELIMITERS,
-                DELIMITER_CURLY_BRACE =  M_turtle_flag(token::DELIMITER_CURLY_BRACE)  | flag::DELIMITERS,
+                DELIMITER_BRACE =              M_turtle_flag(token::DELIMITER_BRACE)                | flag::DELIMITERS,
+                DELIMITER_LEFT_BRACE =         M_turtle_flag(token::DELIMITER_LEFT_OR_RIGHT_BRACE)  | flag::DELIMITERS, // 1 = Left, 0 = Right
+
+                DELIMITER_CURVED_BRACE =       M_turtle_flag(token::DELIMITER_CURVED_BRACE)         | flag::DELIMITERS,
+                DELIMITER_SQUARE_BRACE =       M_turtle_flag(token::DELIMITER_SQUARE_BRACE)         | flag::DELIMITERS,
+                DELIMITER_CURLY_BRACE =        M_turtle_flag(token::DELIMITER_CURLY_BRACE)          | flag::DELIMITERS,
 
                 DELIMITER_CURVED_RIGHT_BRACE = (DELIMITER_CURVED_BRACE                        | DELIMITER_BRACE),
                 DELIMITER_CURVED_LEFT_BRACE =  (DELIMITER_CURVED_BRACE | DELIMITER_LEFT_BRACE | DELIMITER_BRACE),
@@ -410,11 +393,7 @@ namespace turtle
                 DELIMITER_CURLY_RIGHT_BRACE =  (DELIMITER_CURLY_BRACE                         | DELIMITER_BRACE),
                 DELIMITER_CURLY_LEFT_BRACE =   (DELIMITER_CURLY_BRACE  | DELIMITER_LEFT_BRACE | DELIMITER_BRACE),
 
-                DELIMITER_AT_SIGN =      M_turtle_flag(token::DELIMITER_AT_SIGN)     | flag::DELIMITERS,
-                DELIMITER_COLON =        M_turtle_flag(token::DELIMITER_COLON)       | flag::DELIMITERS,
-                DELIMITER_SEMICOLON =    M_turtle_flag(token::DELIMITER_SEMICOLON)   | flag::DELIMITERS,
-                DELIMITER_COMMA =        M_turtle_flag(token::DELIMITER_COMMA)       | flag::DELIMITERS,
-                DELIMITER_PERIOD =       M_turtle_flag(token::DELIMITER_PERIOD)      | flag::DELIMITERS,
+
                 //DELIMITER_ACCESS = M_turtle_flag(token::DELIMITER_ACCESS) | flag::DELIMITERS,
             };
 
@@ -477,7 +456,7 @@ namespace turtle
 
             enum ArithmeticTokenFlags
             {
-                ARITHMETIC_OPERATION =       M_turtle_flag(token::ARITHMETIC_OPERATION)   | flag::ARITHMETIC,
+                ARITHMETIC_OPERATION =       M_turtle_flag(token::ARITHMETIC_OPERATION)       | flag::ARITHMETIC,
 
                 ARITHMETIC_ADD =             M_turtle_flag(token::ARITHMETIC_ADD)             | flag::ARITHMETIC_OPERATION,
                 ARITHMETIC_SUB =             M_turtle_flag(token::ARITHMETIC_SUB)             | flag::ARITHMETIC_OPERATION,
