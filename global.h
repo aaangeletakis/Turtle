@@ -11,26 +11,28 @@
 #endif
 
 #ifdef DEBUG
-#define  DEBUG_M(x) x
+#define DEBUG_M(x) x
 #define NDEBUG_M(x)
 
 #else
-#define  DEBUG_M(x)
+#define DEBUG_M(x)
 #define NDEBUG_M(x) x
 #endif
 
-
-auto print(const std::string& str){
+auto print(const std::string &str)
+{
     puts(str.c_str());
     return 0;
 }
 
-auto panic(const std::string& str){
+auto panic(const std::string &str)
+{
     fprintf(stderr, "ERROR: %s\n", str.c_str());
     exit(1);
 }
 
-auto panic(){
+auto panic()
+{
     exit(1);
 }
 

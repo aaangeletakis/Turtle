@@ -7,7 +7,8 @@
 #include <sstream>
 #include <codecvt>
 
-void readfile(const char* filename, std::string& data){
+void readfile(const char *filename, std::string &data)
+{
     //https://stackoverflow.com/a/2602060
     std::ifstream file(filename);
 
@@ -16,8 +17,7 @@ void readfile(const char* filename, std::string& data){
     file.seekg(0, std::ios::beg);
 
     data.assign((std::istreambuf_iterator<char>(file)),
-                 std::istreambuf_iterator<char>());
-
+                std::istreambuf_iterator<char>());
 }
 
 /*void readFile(const char* filename, std::wstring& data)
@@ -33,8 +33,8 @@ void readfile(const char* filename, std::string& data){
                  std::istreambuf_iterator<wchar_t>());
 }*/
 
-
-void writefile(const char* filename, std::string& data){
+void writefile(const char *filename, std::string &data)
+{
     std::ofstream file(filename);
     file << data;
     file.close();
