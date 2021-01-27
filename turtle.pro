@@ -20,6 +20,7 @@ HEADERS += \
     regex_macros_undef.h \
     token.hpp
 DISTFILES += \
+    .gitignore \
     PRAYER.txt \
     README.md \
     test.py
