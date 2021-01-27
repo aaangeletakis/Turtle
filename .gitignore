@@ -33,3 +33,4 @@
 
 #Qt creator config files
 *.pro
+*.pro.*
