@@ -2,6 +2,7 @@
 #include "node.hpp"
 #include "io.hpp"
 #include "token.hpp"
+#include "cmd_line.h"
 
 /*
  * This is a Transcompiler intended for small ~500 max python files.
@@ -9,31 +10,37 @@
  * this to transform my small time python scripts that I hevely use
  * into faster compiled file.
  */
-
-int main(
-#ifdef NDEBUG
-    int argc, char *argv[]
-#else
-    void
-#endif
-)
+int main(int argc, char *argv[])
 {
-
-        NDEBUG_M(
-            start(argc, argv);
-            const char *filename = argv[1];);
-
-        DEBUG_M(
-            const char *filename = "test.py";);
-        DocumentBucket Document;
+        argc+=0;argv+=0;
+        std::string filename = "test.py";
+        turtle::Document Document;
+        puts("Ready, Set, Go!");
         //set explicit scope to deallocate file data and save memory
         {
                 std::string file;
-                readfile(filename, file);
-                lexFile(file, Document);
-                DEBUG_M(printLexTokens(Document));
-        }
+                readfile(filename.c_str(), file);
 
+                #ifdef DEBUG
+                puts("Tokenizing");
+                #endif
+                turtle::tokenize(file, Document.matches);
+                file.clear();
+
+                #ifdef DEBUG
+                puts("Finished tokenizing, now lexing");
+                #endif
+                turtle::lex(Document);
+                Document.matches.clear();
+                //DEBUG_M(printLexTokens(Document));
+        }
+        /*printf("%d\n",
+               (int)turtle::token::flag::Keyword::_size()+
+               (int)turtle::token::flag::Data::_size()+
+               (int)turtle::token::flag::Arithmetic::_size()+
+               turtle::token::flag::Operator::_size()+
+               turtle::token::flag::Control::_size()
+               );*/
         //Keep python logic and CPP separate in order to modulerize code to differing langs
 
         //pythonToJson(str){

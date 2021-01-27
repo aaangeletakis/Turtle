@@ -3,8 +3,9 @@
 
 #include <string>
 #include <stdio.h>
+#include <stdarg.h>
 
-//#define DEBUG
+#define DEBUG
 
 #ifndef DEBUG
 #define NDEBUG
@@ -25,15 +26,27 @@ auto print(const std::string &str)
     return 0;
 }
 
-auto panic(const std::string &str)
-{
-    fprintf(stderr, "ERROR: %s\n", str.c_str());
-    exit(1);
+void panic(const char *fmt, ...){
+    fprintf(stderr, "error: ");
+
+    va_list arglist;
+    va_start( arglist, fmt );
+    vfprintf(stderr, fmt, arglist);
+    va_end( arglist );
+
+    exit(EXIT_FAILURE);
 }
 
-auto panic()
+void panic(std::string fmt, ...){
+    va_list arglist;
+    va_start( arglist, fmt );
+    panic(fmt.c_str(), arglist);
+    va_end( arglist );
+}
+
+void panic()
 {
-    exit(1);
+    exit(EXIT_FAILURE);
 }
 
 #endif // GLOBAL_H
