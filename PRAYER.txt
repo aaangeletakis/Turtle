@@ -1,4 +1,4 @@
-Dear lord forgive me
+Dear lord forgive me for reinventing the cycle and my use of goto
 
 
 Design philosophies:

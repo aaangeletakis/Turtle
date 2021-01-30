@@ -3,15 +3,17 @@
 #include "io.hpp"
 #include "token.hpp"
 #include "cmd_line.h"
+#include "graph.h"
 
 /*
  * This is a Transcompiler intended for small ~500 max python files.
  * I will probably work on larger projects, but now I'm just writing
  * this to transform my small time python scripts that I hevely use
- * into faster compiled file.
+ * into a faster compiled file.
  */
 int main(int argc, char *argv[])
 {
+        //avoid warning
         argc+=0;argv+=0;
         std::string filename = "test.py";
         turtle::Document Document;
@@ -21,17 +23,15 @@ int main(int argc, char *argv[])
                 std::string file;
                 readfile(filename.c_str(), file);
 
-                #ifdef DEBUG
-                puts("Tokenizing");
-                #endif
-                turtle::tokenize(file, Document.matches);
+                DEBUG_M(puts("Tokenizing");)
+                turtle::tokenize(file, Document.Lexemes);
                 file.clear();
 
-                #ifdef DEBUG
-                puts("Finished tokenizing, now lexing");
-                #endif
+                DEBUG_M(puts("Finished tokenizing, now lexing");)
                 turtle::lex(Document);
-                Document.matches.clear();
+                Document.Lexemes.clear();
+
+                construct_graph(Document);
                 //DEBUG_M(printLexTokens(Document));
         }
         /*printf("%d\n",

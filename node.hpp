@@ -49,41 +49,59 @@
 #else
   #define BETTER_ENUM(ENAME, TYPE, ...) \
         namespace  ENAME {              \
-            enum ENAME {                \
+            enum {                      \
                 __VA_ARGS__             \
             };                          \
         }
 #endif
 
-//In case I want to change it to something bigger in the future
-typedef uint_fast32_t turtle_flag;
+#include <boost/multiprecision/cpp_int.hpp>
+#include <boost/multiprecision/cpp_dec_float.hpp>
+#include <boost/any.hpp>
+
+namespace turtle {
+    //In case I want to change it to something bigger in the future
+    typedef uint32_t turtle_flag;
+
+    typedef boost::multiprecision::cpp_int          turtle_int;
+    typedef boost::multiprecision::cpp_dec_float_50 turtle_float;
+    typedef boost::any                              turtle_any;
+    using   boost::any_cast;
+
+    typedef turtle_int                              t_int;
+    typedef turtle_float                            t_float;
+    typedef turtle_any                              t_any;
+}
 
 //      M_turtle_flag(N) (00000000 00000000 00000000 00000001 <<  N )
 #define M_turtle_flag(N) ((turtle_flag)1 << (N))
 
-//Refer to the huge comment in the flag namespace on wtf this is & does
-#define M_typeFlagMacro(N) (N << ((sizeof(turtle_flag) * 8) - (3 /* Number of Bits needed */)))
+constexpr auto tokenTypeOffset = ( ((sizeof(turtle::turtle_flag) * 8) - (3 /* Number of Bits needed */)) );
 
-//#define M_getBit(N)  sizeof(TURTLES_FLAG_DATA_TYPE) * 8)
+//Refer to the huge comment in the flag namespace on wtf this is & does
+#define M_typeFlagMacro(N) (N << tokenTypeOffset)
 
 struct Node
 {
     enum {NEXT, LAST};
     //Node
-    turtle_flag NodeFlags = 0;
+    turtle::turtle_flag NodeFlags = 0;
     Node *node[2] = {0};
     uint_fast16_t linepos = 0;
     uint_fast16_t line = 0;
-    inline constexpr auto gettype()
+    inline constexpr auto type()
     {
-        return NodeFlags >> ((sizeof(turtle_flag) * 8) - (3 /* Number of Bits needed */ + 1));
+        return NodeFlags >> tokenTypeOffset;
     }
     inline constexpr bool test_bit(unsigned char i){
-        return !!(NodeFlags & ((turtle_flag)1<<i));
+        return !!(NodeFlags & ((turtle::turtle_flag)1<<i));
     }
     //extract bits then check flag integrety
-    inline constexpr bool hasFlag(turtle_flag __f){
+    inline constexpr bool hasFlag(turtle::turtle_flag __f){
         return (NodeFlags & __f) == __f;
+    }
+    inline constexpr bool hasType(turtle::turtle_flag __f){
+        return (NodeFlags >> tokenTypeOffset) == __f;
     }
 };
 
@@ -93,18 +111,6 @@ namespace turtle
     //         ||
     //         \/
     //std::vector<struct Node> SemanticGroups
-
-    //convert 8 byte string to 64 bit intager
-    constexpr uint_fast64_t sti(const char *str)
-    {
-        uint_fast64_t res = 0;
-        for (uint_fast8_t i = 0; str[i]; ++i)
-        {
-            res <<= 8;
-            res |= str[i];
-        }
-        return res;
-    }
 
 #ifdef DEBUG
     template <class T>
@@ -301,7 +307,7 @@ namespace turtle
              *     │└─────────────────────────────┴──> Amount Of whitespace
              *     └────> Is newline
              */
-            #define control_type_macro(N) ((N)<<((sizeof(turtle_flag) * 8) - (3 /* Number of Bits needed */ + 3)))
+            #define control_type_macro(N) ( (N) << (tokenTypeOffset - 3) )
             #define __ENUM_NAME Control
             BETTER_ENUM(__ENUM_NAME, turtle_flag,
                 NULL_TOKEN = 0 | flag::Type::CONTROL,
@@ -335,7 +341,7 @@ namespace turtle
                    │└─────> Format Type
                    └──────> Is unicode string
              */
-            #define DataShiftToMargin(N) ((N)<<((sizeof(turtle_flag) * 8) - (3 /* Number of Bits needed */ + 12)))
+            #define DataShiftToMargin(N) ( (N) << (tokenTypeOffset - 12) )
             #define __ENUM_NAME Data
             BETTER_ENUM(__ENUM_NAME,  turtle_flag,
                 DATA_TYPE_STRING =     DataShiftToMargin(M_turtle_flag(token::__ENUM_NAME::DATA_TYPE_STRING))        | flag::Type::DATA,
@@ -518,6 +524,18 @@ namespace turtle
         } // namespace flag
 
     } // namespace token
+
+    //convert 8 byte string to 64 bit intager
+    constexpr uint_fast64_t sti(const char *str)
+    {
+        uint_fast64_t res = 0;
+        for (uint_fast8_t i = 0; str[i]; ++i)
+        {
+            res <<= 8;
+            res |= str[i];
+        }
+        return res;
+    }
 
     /*
      * Unfortunately std::map can not be constexpr-ed
