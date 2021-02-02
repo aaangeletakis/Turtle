@@ -29,7 +29,9 @@ void check_braces(turtle::Document &Doc){
     }
     if(braces & 1){
         srand(time(0));
-        panic("Unmatched parentheses somewhere in the program%s\n", (rand() % 9 == 8 ? ", good luck" : ""));
+        panic("Unmatched parentheses somewhere in the program%s\n",
+              (rand() % 9 == 8 ? ", good luck" : "")
+        );
     }
 }
 

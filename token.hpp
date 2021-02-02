@@ -1,3 +1,6 @@
+//better to look like an idiot by overcommenting code,
+//then to be the idiot without comments in their code
+
 #ifndef MAIN_H
 #define MAIN_H
 #include <regex>
@@ -7,7 +10,7 @@
 #include "global.h"
 #include <array>
 #include <any>
-
+#include <algorithm>
 
 namespace turtle {
 
@@ -65,87 +68,49 @@ struct _Lexeme  {
 struct Document
 {
     //Document Nodes
-    std::vector<struct Node> Nodes;
     std::vector<_Lexeme> Lexemes;
+    std::vector<struct Node> Nodes;
     std::vector<std::any> data;
 };
 
 auto tokenize(std::string &filedata, std::vector<_Lexeme> &Lexemes)
 {
-#include "regex_macros_def.h"
 /*
-[rRfFUu]{0,2}?"{3}(?:[^\\"]|\\.)*"{3}
-|[rRfFUu]{0,2}?'{3}(?:[^\\']|\\.)*'{3}
-|([rRfFUu]{0,2}?'(?:[^\\']|\\.)*'|[rRfFUu]{0,2}?"(?:[^\\"]|\\.)*")
-|(#[^\r\n]*)
-|([\n\r][ \t]*)
-|(\\[^\r\n]*)
-|(([<>*\/]{2})=?
-|([!%&*+\-<=>\/\\^|]=))
-|([!-\/:-@\[-^{-~]|[^\s!-\/:-@\[-^{-~]+)
+Paste into regex101.com
+Replace regex comments with R"()" by using \(\?#\s*\)
+
+[rRfFUu]{0,2}?("{3}|")(?:[^"]|\\.|\\)*\1|(?#
+)([rRfFUu]{0,2}?('{3}|')(?:[^']|\\.|\\)*\3)|(?#
+)(#[^\r\n]*)|(?#
+)([\n\r][ \t]*)|(?#
+)(\\[^\r\n]*)|(?#
+)((?#
+    )(\.{3})|(?#
+    )([0-9][0-9_]*\.[0-9_]*[0-9][0-9_]*[a-zA-Z]*)(?#
+    )|([0-9][0-9_]*\.[a-zA-Z]*)|(?#
+    )(\.[0-9][0-9_]*[a-zA-Z]*)|(?#
+    )([<>*\/]{2})=?|(?#
+    )([!%&*+\-<=>\/\\^|]=)(?#
+))|(?#
+)([!-\/:-@\[-^{-~]|[^\s!-\/:-@\[-^{-~]+)
 */
     //when rEgEX is A LaNGUAgE
     static std::regex TokenRegex(
-            //Capture doc strings """
-
-            //this rule needs to have higher precedence than regular strings
-            //or else the matcher will get confused between the difference of """ and "
-
-       __STRING_PREFIX ___DOC_STRING(__DOUBLEQ)
-       __ELSE(
-             __STRING_PREFIX ___DOC_STRING(__SINGLEQ)
-       )
-       //Capture strings
-       __ELIF(
-            //Capture single ' quote strings
-            //string capture
-            __STRING_PREFIX ___STRING(__SINGLEQ)
-
-            __ELSE(
-                //Capture double " qoute strings
-                //string capture
-                __STRING_PREFIX ___STRING(__DOUBLEQ)
-            )
-
-       )
-
-            //Capture python single comment
-       __ELIF(
-              "#" ___AND __ZERO_OR_MORE_OF(__ANY_CHAR_THATS_NOT_A_NEWLINE)
-       )
-
-       //Capture newline and its whitespace
-       __ELIF(
-               __NEWLINE ___AND __ZERO_OR_MORE_OF(__WHITESPACE)
-       )
-
-       //Capture backslash '\' and anything that comes after it, so we can quickly ignore it
-       __ELIF(
-              __BACKSLASH ___AND __ZERO_OR_MORE_OF(__ANY_CHAR_THATS_NOT_A_NEWLINE)
-       )
-
-       //Capture operators such as +=
-       __ELIF(
-              //capture 2-3 character assignment operators i.e. <<= or <=
-              R"(([<>*\/]{2}))" ___AND __ZERO_OR_ONE_OF("=")
-              ___ELSE(
-                    //capture 2 character operators i.e. ==
-                    __ANY_CHAR_OF(R"(!%&*+\-<=>\/\\^|)") ___AND "="
-              )
-       )
-
-       //capture anything else, symbols, labels, and any other arithmitic
-       ___ELSE(
-                 //capture any single character symbol/operator i.e. =
-                 __ANY_CHAR_OF(__PYTHON_SYMBOLS)
-                 __ELSE(
-                     //capture any identifiers/numbers
-                     //i.e anything not a sybol or space
-                     __ONE_OR_MORE_OF( __NONE_OF(R"(\s)" __PYTHON_SYMBOLS ) )
-                 )
-       )
+                 R"([rRfFUu]{0,2}?("{3}|")(?:[^"]|\\.|\\)*\1|)"        //capture " strings
+                R"(([rRfFUu]{0,2}?('{3}|')(?:[^']|\\.|\\)*\3)|)"       //capture ' strings
+                R"((#[^\r\n]*)|)"                                      //capture comments
+                R"(([\n\r][ \t]*)|)"                                   //capture newlines
+                R"((\\[^\r\n]*)|)"                                     /* capture '\'andAnythingAfterTheBackslash  */
+                R"(()"
+                    R"((\.{3})|)"                                      //capture "..."
+                    R"(([0-9][0-9_]*\.[0-9_]*[0-9][0-9_]*[a-zA-Z]*)|)" //──┬┬─> fucking floating point numbers
+                    R"(([0-9][0-9_]*\.[a-zA-Z]*)|)"                    //──┘│
+                    R"((\.[0-9][0-9_]*[a-zA-Z]*)|)"                    //───┘
+                    R"(([<>*\/]{2})=?|)"                               //capture 2-3 character operators
+                    R"(([!%&*+\-<=>\/\\^|]=))"                         //capture 2 caracter operators
+                R"()|)"
+                R"(([!-\/:-@\[-^{-~]|[^\s!-\/:-@\[-^{-~]+))"           //capture anything else
     );
-#include "regex_macros_undef.h"
 
     std::sregex_iterator rend, rit(filedata.begin(), filedata.end(), TokenRegex);
     Lexemes.reserve(std::distance(rit, rend));
@@ -161,7 +126,7 @@ auto tokenize(std::string &filedata, std::vector<_Lexeme> &Lexemes)
     }
 }
 
-#ifdef DEBUG
+#if DEBUG_CPP
 //for debugging
 std::string getFlagName(turtle_flag flag)
 {
@@ -194,7 +159,7 @@ std::string getFlagName(turtle_flag flag)
 
 void lex(turtle::Document &Document){
 
-#ifdef DEBUG
+#if DEBUG_CPP
     constexpr static const char * character_substitutions[][2] = {
         {R"(\n)", R"(\n)"},
         {R"(\r)", R"(\r)",},
@@ -242,8 +207,8 @@ void lex(turtle::Document &Document){
             if(len > 1){
                 for(unsigned int j = 1; j < len; ++j){
                     if(Lstr[j] == '\t'){
-                        len -= 1;
-                        len += 8;
+                        len -= 1; //remove tab character
+                        len += 8; //replace with 8 spaces
                     }
                 }
             }
@@ -253,127 +218,69 @@ void lex(turtle::Document &Document){
         case '0' ... '9':{
             switch(Lstr.size()){
                 default:{
-                enum{
-                    INVALID_CHARACTER        = 0b000,
-                    VALID_CHARACTER          = 0b010,
-                    POSTFIX                  = 0b001,
-                    IS_ZERO                  = 0b110,
-
-                    EXPONENT                  =    0,
-                    HEX,
-                    BINARY,
-                    OCTAL,
+                enum {
+                    RATIONAL_NUM,
+                    EXPONENTIAL,
                     COMPLEX,
-                    STARTS_W_ZERO,
-                    HAS_POSTFIX,
-
-
-#define numberFlag_M(F) (F << 2)
-                    EXPONENT_FLAG = numberFlag_M(EXPONENT) | POSTFIX,
-                    HEX_FLAG =      numberFlag_M(HEX)      | POSTFIX,
-                    BINARY_FLAG =   numberFlag_M(BINARY)   | POSTFIX,
-                    OCTAL_FLAG =    numberFlag_M(OCTAL)    | POSTFIX,
-                    COMPLEX_FLAG =  numberFlag_M(COMPLEX)  | POSTFIX,
-#undef numberFlag_M
-
-                    EXPONENT_BIT      = 1 << EXPONENT,
-                    HEX_BIT           = 1 << HEX,
-                    BINARY_BIT        = 1 << BINARY,
-                    OCTAL_BIT         = 1 << OCTAL,
-                    COMPLEX_BIT       = 1 << COMPLEX,
-                    STARTS_W_ZERO_BIT = 1 << STARTS_W_ZERO,
-                    HAS_POSTFIX_BIT   = 1 << HAS_POSTFIX,
-                    REGUALR_NUMBER = 0,
-
+                    HEX_OR_OCTAL, //cuz they both have the same alphabet
+                    BINARY
                 };
-
-                constexpr static uint_fast8_t char_map[]={
-                         INVALID_CHARACTER, /*  0 */      INVALID_CHARACTER, /*  1 */      INVALID_CHARACTER, /*  2 */      INVALID_CHARACTER, /*  3 */
-                         INVALID_CHARACTER, /*  4 */      INVALID_CHARACTER, /*  5 */      INVALID_CHARACTER, /*  6 */      INVALID_CHARACTER, /*  7 */
-                         INVALID_CHARACTER, /*  8 */      INVALID_CHARACTER, /*  9 */      INVALID_CHARACTER, /* 10 */      INVALID_CHARACTER, /* 11 */
-                         INVALID_CHARACTER, /* 12 */      INVALID_CHARACTER, /* 13 */      INVALID_CHARACTER, /* 14 */      INVALID_CHARACTER, /* 15 */
-                         INVALID_CHARACTER, /* 16 */      INVALID_CHARACTER, /* 17 */      INVALID_CHARACTER, /* 18 */      INVALID_CHARACTER, /* 19 */
-                         INVALID_CHARACTER, /* 20 */      INVALID_CHARACTER, /* 21 */      INVALID_CHARACTER, /* 22 */      INVALID_CHARACTER, /* 23 */
-                         INVALID_CHARACTER, /* 24 */      INVALID_CHARACTER, /* 25 */      INVALID_CHARACTER, /* 26 */      INVALID_CHARACTER, /* 27 */
-                         INVALID_CHARACTER, /* 28 */      INVALID_CHARACTER, /* 29 */      INVALID_CHARACTER, /* 30 */      INVALID_CHARACTER, /* 31 */
-                         INVALID_CHARACTER, /* 32 */      INVALID_CHARACTER, /*  ! */      INVALID_CHARACTER, /*  " */      INVALID_CHARACTER, /*  # */
-                         INVALID_CHARACTER, /*  $ */      INVALID_CHARACTER, /*  % */      INVALID_CHARACTER, /*  & */      INVALID_CHARACTER, /*  ' */
-                         INVALID_CHARACTER, /*  ( */      INVALID_CHARACTER, /*  ) */      INVALID_CHARACTER, /*  * */      INVALID_CHARACTER, /*  + */
-                         INVALID_CHARACTER, /*  , */      INVALID_CHARACTER, /*  - */      INVALID_CHARACTER, /*  . */      INVALID_CHARACTER, /*  / */
-
-                /* you've just gotta be
-                 * special don't you zero*/
-                                   IS_ZERO, /*  0 */        VALID_CHARACTER, /*  1 */        VALID_CHARACTER, /*  2 */        VALID_CHARACTER, /*  3 */
-                           VALID_CHARACTER, /*  4 */        VALID_CHARACTER, /*  5 */        VALID_CHARACTER, /*  6 */        VALID_CHARACTER, /*  7 */
-                           VALID_CHARACTER, /*  8 */        VALID_CHARACTER, /*  9 */      INVALID_CHARACTER, /*  : */      INVALID_CHARACTER, /*  ; */
-                         INVALID_CHARACTER, /*  < */      INVALID_CHARACTER, /*  = */      INVALID_CHARACTER, /*  > */      INVALID_CHARACTER, /*  ? */
-                         INVALID_CHARACTER, /*  @ */      INVALID_CHARACTER, /*  A */      INVALID_CHARACTER, /*  B */      INVALID_CHARACTER, /*  C */
-                         INVALID_CHARACTER, /*  D */      INVALID_CHARACTER, /*  E */      INVALID_CHARACTER, /*  F */      INVALID_CHARACTER, /*  G */
-                         INVALID_CHARACTER, /*  H */      INVALID_CHARACTER, /*  I */      INVALID_CHARACTER, /*  J */      INVALID_CHARACTER, /*  K */
-                         INVALID_CHARACTER, /*  L */      INVALID_CHARACTER, /*  M */      INVALID_CHARACTER, /*  N */      INVALID_CHARACTER, /*  O */
-                         INVALID_CHARACTER, /*  P */      INVALID_CHARACTER, /*  Q */      INVALID_CHARACTER, /*  R */      INVALID_CHARACTER, /*  S */
-                         INVALID_CHARACTER, /*  T */      INVALID_CHARACTER, /*  U */      INVALID_CHARACTER, /*  V */      INVALID_CHARACTER, /*  W */
-                         INVALID_CHARACTER, /*  X */      INVALID_CHARACTER, /*  Y */      INVALID_CHARACTER, /*  Z */      INVALID_CHARACTER, /*  [ */
-                         INVALID_CHARACTER, /*  \ */      INVALID_CHARACTER, /*  ] */      INVALID_CHARACTER, /*  ^ */        VALID_CHARACTER, /*  _ */
-                         INVALID_CHARACTER, /*  ` */      INVALID_CHARACTER, /*  a */            BINARY_FLAG, /*  b */      INVALID_CHARACTER, /*  c */
-                         INVALID_CHARACTER, /*  d */          EXPONENT_FLAG, /*  e */      INVALID_CHARACTER, /*  f */      INVALID_CHARACTER, /*  g */
-                         INVALID_CHARACTER, /*  h */      INVALID_CHARACTER, /*  i */           COMPLEX_FLAG, /*  j */      INVALID_CHARACTER, /*  k */
-                         INVALID_CHARACTER, /*  l */      INVALID_CHARACTER, /*  m */      INVALID_CHARACTER, /*  n */             OCTAL_FLAG, /*  o */
-                         INVALID_CHARACTER, /*  p */      INVALID_CHARACTER, /*  q */      INVALID_CHARACTER, /*  r */      INVALID_CHARACTER, /*  s */
-                         INVALID_CHARACTER, /*  t */      INVALID_CHARACTER, /*  u */      INVALID_CHARACTER, /*  v */      INVALID_CHARACTER, /*  w */
-                                  HEX_FLAG, /*  x */      INVALID_CHARACTER, /*  y */      INVALID_CHARACTER, /*  z */      INVALID_CHARACTER, /*  { */
-                         INVALID_CHARACTER, /*  | */      INVALID_CHARACTER, /*  } */      INVALID_CHARACTER, /*  ~ */
+                //parsing the numbers is too complex
+                static std::regex regex [] = {
+                    std::regex(R"(^([0-9]|_)+$)"),
+                    std::regex(R"(^([0-9]|_)+[eE]([0-9]|_)+$)"),
+                    std::regex(R"(^([0-9]|_)+[jJ]$)"),
+                    std::regex(R"(^0[xXoO][0-9A-Fa-f_]+$)"),
+                    std::regex(R"(^0[bB]([01]|_)+$)")
                 };
-                /*
-                 * f -> 0b0000_0000
-                 *        ││└─────┴> Number postfix indicator
-                 *        │└───────> Starts with zero
-                 *        └────────> Persistant bit to tell if postfix has already been set
-                 */
-                auto * c = Lstr.data();
-                uint_fast8_t f = 0;
-                const auto len = Lstr.length() - 1;
-                for(uint_fast8_t i = 0; i < len; ++i, ++c){
-                    const auto char_flag = char_map[(uint_fast8_t)*c];
-                    if(char_flag == INVALID_CHARACTER){
-                        panic("Line %d:%d Invalid postfix for number\n", Lexeme.lnum + 1, Lexeme.lpos);
-                    }
-                    if(char_flag & 1){
-                        if(f & (HAS_POSTFIX)){
-                            panic("Number prefix set twice\n");
-                        } else {
-                            f |= (1 << (char_flag >> 2));
-                            f |= HAS_POSTFIX;
+                for(uint_fast8_t i = 0; i < sizeof(regex)/sizeof(regex[0]); ++i){
+                    if(std::regex_match(Lstr, regex[i])){
+                        switch(i){
+                        case EXPONENTIAL:
+                            panic("Exponetial numbers not supported cuz im not a nerd\n");
+                            break;
+                        case COMPLEX:
+                            panic("Compex numbers not supported cuz I don't know what they are\n");
+                            break;
+                        case BINARY:
+                            panic("Binary numbers not supported\n");
+                            break;
+                        case HEX_OR_OCTAL: break;
+                        case RATIONAL_NUM:
+                            //python outputs an error if your number is non zero but starts with zero
+                            if(std::regex_match(Lstr, std::regex(R"(^[0_]+[_1-9]+$)"))){
+                                panic("leading zeros in decimal integer literals are not permitted; "
+                                      "use an 0o prefix for octal integers\n");
+                            }
+                            break;
                         }
+                        goto _DATA_TYPE_NUMBER;
                     }
                 }
-                switch(f){
-                case EXPONENT_BIT:
-                    panic("Exponet literals not supported\n");
-                    break;
-                case HEX_BIT:
-                case BINARY_BIT:
-                case OCTAL_BIT:
-                    panic("Octal literals not supported as I don't use them\n");
-                    break;
-                case COMPLEX_BIT:
-                    panic("Complex literals not supported as I don't know what they are\n");
-                    break;
-                case REGUALR_NUMBER:
-                    break;
-                }
+                panic("Invalid number literal\n");
                 }break;
                 case 1:break;
             }
+            _DATA_TYPE_NUMBER:
+            std::string num('\0', Lstr.size());
+            std::copy_if(Lstr.begin(), Lstr.end(),  std::back_inserter(num),
+                [](auto c){
+                    return c != '_';
+                }
+            );
             flag |= turtle::token::flag::Data::DATA_TYPE_NUMBER | Document.data.size();
-            Document.data.push_back((std::string_view)Lstr);
+            Document.data.push_back(
+                        std::pair<std::string_view, turtle_int>(
+                            {(std::string_view)Lstr, turtle_int(num)}
+                        )
+            );
         }break;
         //fucking strings
         case 'r':
         case 'R':
         case 'u':
         case 'U':
-        case 'f':
+        case 'f'://f is for friendship :)
         case 'F':{
             if(Lstr.size() > 2){
                 for(unsigned int j = 1; j < 3; ++j){
@@ -388,120 +295,184 @@ void lex(turtle::Document &Document){
                                        //                       │                                                               │
             _TOKEN_STRING_WITH_PREFIX: //   <───────────────────┘                                                               │
             enum {                                                                                                           // │
+                _NULL_FLAG     = 0b000,                                                                                      // │
                 _RAW_FLAG      = 0b001,                                                                                      // │
                 _UNICODE_FLAG  = 0b010,                                                                                      // │
                 _FORMATED_FLAG = 0b100,                                                                                      // │
             };                                                                                                               // │
             //Generated via python program                                                                                   // │
-            //Use this to tell if we've found a string prefix                                                                // │
-            constexpr static uint_fast8_t pmap[] = {                                                                         // │
-                0, /*  0 */ 0, /*  1 */ 0, /*  2 */ 0, /*  3 */ 0, /*  4 */ 0, /*  5 */ 0, /*  6 */ 0, /*  7 */ 0, /*  8 */  // │
-                0, /*  9 */ 0, /* 10 */ 0, /* 11 */ 0, /* 12 */ 0, /* 13 */ 0, /* 14 */ 0, /* 15 */ 0, /* 16 */ 0, /* 17 */  // │
-                0, /* 18 */ 0, /* 19 */ 0, /* 20 */ 0, /* 21 */ 0, /* 22 */ 0, /* 23 */ 0, /* 24 */ 0, /* 25 */ 0, /* 26 */  // │
-                0, /* 27 */ 0, /* 28 */ 0, /* 29 */ 0, /* 30 */ 0, /* 31 */ 0, /* 32 */ 0, /*  ! */ 0, /*  " */ 0, /*  # */  // │
-                0, /*  $ */ 0, /*  % */ 0, /*  & */ 0, /*  ' */ 0, /*  ( */ 0, /*  ) */ 0, /*  * */ 0, /*  + */ 0, /*  , */  // │
-                0, /*  - */ 0, /*  . */ 0, /*  / */ 0, /*  0 */ 0, /*  1 */ 0, /*  2 */ 0, /*  3 */ 0, /*  4 */ 0, /*  5 */  // │
-                0, /*  6 */ 0, /*  7 */ 0, /*  8 */ 0, /*  9 */ 0, /*  : */ 0, /*  ; */ 0, /*  < */ 0, /*  = */ 0, /*  > */  // │
-                0, /*  ? */ 0, /*  @ */ 0, /*  A */ 0, /*  B */ 0, /*  C */ 0, /*  D */ 0, /*  E */ 1, /*  F */ 0, /*  G */  // │
-                0, /*  H */ 0, /*  I */ 0, /*  J */ 0, /*  K */ 0, /*  L */ 0, /*  M */ 0, /*  N */ 0, /*  O */ 0, /*  P */  // │
-                0, /*  Q */ 1, /*  R */ 0, /*  S */ 0, /*  T */ 1, /*  U */ 0, /*  V */ 0, /*  W */ 0, /*  X */ 0, /*  Y */  // │
-                0, /*  Z */ 0, /*  [ */ 0, /*  \ */ 0, /*  ] */ 0, /*  ^ */ 0, /*  _ */ 0, /*  ` */ 0, /*  a */ 0, /*  b */  // │
-                0, /*  c */ 0, /*  d */ 0, /*  e */ 1, /*  f */ 0, /*  g */ 0, /*  h */ 0, /*  i */ 0, /*  j */ 0, /*  k */  // │
-                0, /*  l */ 0, /*  m */ 0, /*  n */ 0, /*  o */ 0, /*  p */ 0, /*  q */ 1, /*  r */ 0, /*  s */ 0, /*  t */  // │
-                1, /*  u */ 0, /*  v */ 0, /*  w */ 0, /*  x */ 0, /*  y */ 0, /*  z */ 0, /*  { */ 0, /*  | */ 0, /*  } */  // │
-                0, /*  ~ */                                                                                                  // │
+            //Use this to tell if we've found a string prefix [rRuUfF]                                                       // │
+            constexpr static void * pmap[] = {                                                                               // │
+                &&_PUT_STRING_PREFIX, /*  0 */ &&_PUT_STRING_PREFIX, /*  1 */ &&_PUT_STRING_PREFIX, /*  2 */                 // │
+                &&_PUT_STRING_PREFIX, /*  3 */ &&_PUT_STRING_PREFIX, /*  4 */ &&_PUT_STRING_PREFIX, /*  5 */                 // │
+                &&_PUT_STRING_PREFIX, /*  6 */ &&_PUT_STRING_PREFIX, /*  7 */ &&_PUT_STRING_PREFIX, /*  8 */                 // │
+                &&_PUT_STRING_PREFIX, /*  9 */ &&_PUT_STRING_PREFIX, /* 10 */ &&_PUT_STRING_PREFIX, /* 11 */                 // │
+                &&_PUT_STRING_PREFIX, /* 12 */ &&_PUT_STRING_PREFIX, /* 13 */ &&_PUT_STRING_PREFIX, /* 14 */                 // │
+                &&_PUT_STRING_PREFIX, /* 15 */ &&_PUT_STRING_PREFIX, /* 16 */ &&_PUT_STRING_PREFIX, /* 17 */                 // │
+                &&_PUT_STRING_PREFIX, /* 18 */ &&_PUT_STRING_PREFIX, /* 19 */ &&_PUT_STRING_PREFIX, /* 20 */                 // │
+                &&_PUT_STRING_PREFIX, /* 21 */ &&_PUT_STRING_PREFIX, /* 22 */ &&_PUT_STRING_PREFIX, /* 23 */                 // │
+                &&_PUT_STRING_PREFIX, /* 24 */ &&_PUT_STRING_PREFIX, /* 25 */ &&_PUT_STRING_PREFIX, /* 26 */                 // │
+                &&_PUT_STRING_PREFIX, /* 27 */ &&_PUT_STRING_PREFIX, /* 28 */ &&_PUT_STRING_PREFIX, /* 29 */                 // │
+                &&_PUT_STRING_PREFIX, /* 30 */ &&_PUT_STRING_PREFIX, /* 31 */ &&_PUT_STRING_PREFIX, /* 32 */                 // │
+                &&_PUT_STRING_PREFIX, /*  ! */ &&_PUT_STRING_PREFIX, /*  " */ &&_PUT_STRING_PREFIX, /*  # */                 // │
+                &&_PUT_STRING_PREFIX, /*  $ */ &&_PUT_STRING_PREFIX, /*  % */ &&_PUT_STRING_PREFIX, /*  & */                 // │
+                &&_PUT_STRING_PREFIX, /*  ' */ &&_PUT_STRING_PREFIX, /*  ( */ &&_PUT_STRING_PREFIX, /*  ) */                 // │
+                &&_PUT_STRING_PREFIX, /*  * */ &&_PUT_STRING_PREFIX, /*  + */ &&_PUT_STRING_PREFIX, /*  , */                 // │
+                &&_PUT_STRING_PREFIX, /*  - */ &&_PUT_STRING_PREFIX, /*  . */ &&_PUT_STRING_PREFIX, /*  / */                 // │
+                &&_PUT_STRING_PREFIX, /*  0 */ &&_PUT_STRING_PREFIX, /*  1 */ &&_PUT_STRING_PREFIX, /*  2 */                 // │
+                &&_PUT_STRING_PREFIX, /*  3 */ &&_PUT_STRING_PREFIX, /*  4 */ &&_PUT_STRING_PREFIX, /*  5 */                 // │
+                &&_PUT_STRING_PREFIX, /*  6 */ &&_PUT_STRING_PREFIX, /*  7 */ &&_PUT_STRING_PREFIX, /*  8 */                 // │
+                &&_PUT_STRING_PREFIX, /*  9 */ &&_PUT_STRING_PREFIX, /*  : */ &&_PUT_STRING_PREFIX, /*  ; */                 // │
+                &&_PUT_STRING_PREFIX, /*  < */ &&_PUT_STRING_PREFIX, /*  = */ &&_PUT_STRING_PREFIX, /*  > */                 // │
+                &&_PUT_STRING_PREFIX, /*  ? */ &&_PUT_STRING_PREFIX, /*  @ */ &&_PUT_STRING_PREFIX, /*  A */                 // │
+                &&_PUT_STRING_PREFIX, /*  B */ &&_PUT_STRING_PREFIX, /*  C */ &&_PUT_STRING_PREFIX, /*  D */                 // │
+                &&_PUT_STRING_PREFIX, /*  E */ &&_GET_STRING_PREFIX, /*  F */ &&_PUT_STRING_PREFIX, /*  G */                 // │
+                &&_PUT_STRING_PREFIX, /*  H */ &&_PUT_STRING_PREFIX, /*  I */ &&_PUT_STRING_PREFIX, /*  J */                 // │
+                &&_PUT_STRING_PREFIX, /*  K */ &&_PUT_STRING_PREFIX, /*  L */ &&_PUT_STRING_PREFIX, /*  M */                 // │
+                &&_PUT_STRING_PREFIX, /*  N */ &&_PUT_STRING_PREFIX, /*  O */ &&_PUT_STRING_PREFIX, /*  P */                 // │
+                &&_PUT_STRING_PREFIX, /*  Q */ &&_GET_STRING_PREFIX, /*  R */ &&_PUT_STRING_PREFIX, /*  S */                 // │
+                &&_PUT_STRING_PREFIX, /*  T */ &&_GET_STRING_PREFIX, /*  U */ &&_PUT_STRING_PREFIX, /*  V */                 // │
+                &&_PUT_STRING_PREFIX, /*  W */ &&_PUT_STRING_PREFIX, /*  X */ &&_PUT_STRING_PREFIX, /*  Y */                 // │
+                &&_PUT_STRING_PREFIX, /*  Z */ &&_PUT_STRING_PREFIX, /*  [ */ &&_PUT_STRING_PREFIX, /*  \ */                 // │
+                &&_PUT_STRING_PREFIX, /*  ] */ &&_PUT_STRING_PREFIX, /*  ^ */ &&_PUT_STRING_PREFIX, /*  _ */                 // │
+                &&_PUT_STRING_PREFIX, /*  ` */ &&_PUT_STRING_PREFIX, /*  a */ &&_PUT_STRING_PREFIX, /*  b */                 // │
+                &&_PUT_STRING_PREFIX, /*  c */ &&_PUT_STRING_PREFIX, /*  d */ &&_PUT_STRING_PREFIX, /*  e */                 // │
+                &&_GET_STRING_PREFIX, /*  f */ &&_PUT_STRING_PREFIX, /*  g */ &&_PUT_STRING_PREFIX, /*  h */                 // │
+                &&_PUT_STRING_PREFIX, /*  i */ &&_PUT_STRING_PREFIX, /*  j */ &&_PUT_STRING_PREFIX, /*  k */                 // │
+                &&_PUT_STRING_PREFIX, /*  l */ &&_PUT_STRING_PREFIX, /*  m */ &&_PUT_STRING_PREFIX, /*  n */                 // │
+                &&_PUT_STRING_PREFIX, /*  o */ &&_PUT_STRING_PREFIX, /*  p */ &&_PUT_STRING_PREFIX, /*  q */                 // │
+                &&_GET_STRING_PREFIX, /*  r */ &&_PUT_STRING_PREFIX, /*  s */ &&_PUT_STRING_PREFIX, /*  t */                 // │
+                &&_GET_STRING_PREFIX, /*  u */ &&_PUT_STRING_PREFIX, /*  v */ &&_PUT_STRING_PREFIX, /*  w */                 // │
+                &&_PUT_STRING_PREFIX, /*  x */ &&_PUT_STRING_PREFIX, /*  y */ &&_PUT_STRING_PREFIX, /*  z */                 // │
+                &&_PUT_STRING_PREFIX, /*  { */ &&_PUT_STRING_PREFIX, /*  | */ &&_PUT_STRING_PREFIX, /*  } */                 // │
+                &&_PUT_STRING_PREFIX, /*  ~ */                                                                               // │
             };                                                                                                               // │
                                                                                                                              // └>───────────────────────────────>┐
-            constexpr static uint_fast8_t fmap[] = {                                                                         //                                   │
-                0, /*  0 */               0, /*  1 */               0, /*  2 */               0, /*  3 */               0, /*  4 */               0, /*  5 */  // │
-                0, /*  6 */               0, /*  7 */               0, /*  8 */               0, /*  9 */               0, /* 10 */               0, /* 11 */  // │
-                0, /* 12 */               0, /* 13 */               0, /* 14 */               0, /* 15 */               0, /* 16 */               0, /* 17 */  // │
-                0, /* 18 */               0, /* 19 */               0, /* 20 */               0, /* 21 */               0, /* 22 */               0, /* 23 */  // │
-                0, /* 24 */               0, /* 25 */               0, /* 26 */               0, /* 27 */               0, /* 28 */               0, /* 29 */  // │
-                0, /* 30 */               0, /* 31 */               0, /* 32 */               0, /*  ! */               0, /*  " */               0, /*  # */  // │
-                0, /*  $ */               0, /*  % */               0, /*  & */               0, /*  ' */               0, /*  ( */               0, /*  ) */  // │
-                0, /*  * */               0, /*  + */               0, /*  , */               0, /*  - */               0, /*  . */               0, /*  / */  // │
-                0, /*  0 */               0, /*  1 */               0, /*  2 */               0, /*  3 */               0, /*  4 */               0, /*  5 */  // │
-                0, /*  6 */               0, /*  7 */               0, /*  8 */               0, /*  9 */               0, /*  : */               0, /*  ; */  // │
-                0, /*  < */               0, /*  = */               0, /*  > */               0, /*  ? */               0, /*  @ */               0, /*  A */  // │
-                0, /*  B */               0, /*  C */               0, /*  D */               0, /*  E */  _FORMATED_FLAG, /*  F */               0, /*  G */  // │
-                0, /*  H */               0, /*  I */               0, /*  J */               0, /*  K */               0, /*  L */               0, /*  M */  // │
-                0, /*  N */               0, /*  O */               0, /*  P */               0, /*  Q */       _RAW_FLAG, /*  R */               0, /*  S */  // │
-                0, /*  T */   _UNICODE_FLAG, /*  U */               0, /*  V */               0, /*  W */               0, /*  X */               0, /*  Y */  // │
-                0, /*  Z */               0, /*  [ */               0, /*  \ */               0, /*  ] */               0, /*  ^ */               0, /*  _ */  // │
-                0, /*  ` */               0, /*  a */               0, /*  b */               0, /*  c */               0, /*  d */               0, /*  e */  // │
-   _FORMATED_FLAG, /*  f */               0, /*  g */               0, /*  h */               0, /*  i */               0, /*  j */               0, /*  k */  // │
-                0, /*  l */               0, /*  m */               0, /*  n */               0, /*  o */               0, /*  p */               0, /*  q */  // │
-        _RAW_FLAG, /*  r */               0, /*  s */               0, /*  t */   _UNICODE_FLAG, /*  u */               0, /*  v */               0, /*  w */  // │
-                0, /*  x */               0, /*  y */               0, /*  z */               0, /*  { */               0, /*  | */               0, /*  } */  // │
-                0, /*  ~ */                                                                                                                                    // │
+            /*                                                                                                                                                 // │
+             * if only we could do                                                                                                                             // │
+             *                                                                                                                                                 // │
+             * static const uint_fast8_t fmap[127] = {
+             *                  _NULL_FLAG,       //zero initialize any unspecified elements
+             *      ['R'] =      _RAW_FLAG,
+             *      ['r'] =      _RAW_FLAG,
+             *      ['f'] = _FORMATED_FLAG,
+             *      ['F'] = _FORMATED_FLAG,
+             *      ['U'] =  _UNICODE_FLAG,
+             *      ['u'] =  _UNICODE_FLAG
+             * };
+             *
+             * like in C 😭
+             * That would make constructing a jumptable so much simpler
+            */
+            constexpr static uint_fast8_t fmap[] = {
+                  _NULL_FLAG, /*  0 */     _NULL_FLAG, /*  1 */     _NULL_FLAG, /*  2 */     _NULL_FLAG, /*  3 */     _NULL_FLAG, /*  4 */
+                  _NULL_FLAG, /*  5 */     _NULL_FLAG, /*  6 */     _NULL_FLAG, /*  7 */     _NULL_FLAG, /*  8 */     _NULL_FLAG, /*  9 */
+                  _NULL_FLAG, /* 10 */     _NULL_FLAG, /* 11 */     _NULL_FLAG, /* 12 */     _NULL_FLAG, /* 13 */     _NULL_FLAG, /* 14 */
+                  _NULL_FLAG, /* 15 */     _NULL_FLAG, /* 16 */     _NULL_FLAG, /* 17 */     _NULL_FLAG, /* 18 */     _NULL_FLAG, /* 19 */
+                  _NULL_FLAG, /* 20 */     _NULL_FLAG, /* 21 */     _NULL_FLAG, /* 22 */     _NULL_FLAG, /* 23 */     _NULL_FLAG, /* 24 */
+                  _NULL_FLAG, /* 25 */     _NULL_FLAG, /* 26 */     _NULL_FLAG, /* 27 */     _NULL_FLAG, /* 28 */     _NULL_FLAG, /* 29 */
+                  _NULL_FLAG, /* 30 */     _NULL_FLAG, /* 31 */     _NULL_FLAG, /* 32 */     _NULL_FLAG, /*  ! */     _NULL_FLAG, /*  " */
+                  _NULL_FLAG, /*  # */     _NULL_FLAG, /*  $ */     _NULL_FLAG, /*  % */     _NULL_FLAG, /*  & */     _NULL_FLAG, /*  ' */
+                  _NULL_FLAG, /*  ( */     _NULL_FLAG, /*  ) */     _NULL_FLAG, /*  * */     _NULL_FLAG, /*  + */     _NULL_FLAG, /*  , */
+                  _NULL_FLAG, /*  - */     _NULL_FLAG, /*  . */     _NULL_FLAG, /*  / */     _NULL_FLAG, /*  0 */     _NULL_FLAG, /*  1 */
+                  _NULL_FLAG, /*  2 */     _NULL_FLAG, /*  3 */     _NULL_FLAG, /*  4 */     _NULL_FLAG, /*  5 */     _NULL_FLAG, /*  6 */
+                  _NULL_FLAG, /*  7 */     _NULL_FLAG, /*  8 */     _NULL_FLAG, /*  9 */     _NULL_FLAG, /*  : */     _NULL_FLAG, /*  ; */
+                  _NULL_FLAG, /*  < */     _NULL_FLAG, /*  = */     _NULL_FLAG, /*  > */     _NULL_FLAG, /*  ? */     _NULL_FLAG, /*  @ */
+                  _NULL_FLAG, /*  A */     _NULL_FLAG, /*  B */     _NULL_FLAG, /*  C */     _NULL_FLAG, /*  D */     _NULL_FLAG, /*  E */
+              _FORMATED_FLAG, /*  F */     _NULL_FLAG, /*  G */     _NULL_FLAG, /*  H */     _NULL_FLAG, /*  I */     _NULL_FLAG, /*  J */
+                  _NULL_FLAG, /*  K */     _NULL_FLAG, /*  L */     _NULL_FLAG, /*  M */     _NULL_FLAG, /*  N */     _NULL_FLAG, /*  O */
+                  _NULL_FLAG, /*  P */     _NULL_FLAG, /*  Q */      _RAW_FLAG, /*  R */     _NULL_FLAG, /*  S */     _NULL_FLAG, /*  T */
+               _UNICODE_FLAG, /*  U */     _NULL_FLAG, /*  V */     _NULL_FLAG, /*  W */     _NULL_FLAG, /*  X */     _NULL_FLAG, /*  Y */
+                  _NULL_FLAG, /*  Z */     _NULL_FLAG, /*  [ */     _NULL_FLAG, /*  \ */     _NULL_FLAG, /*  ] */     _NULL_FLAG, /*  ^ */
+                  _NULL_FLAG, /*  _ */     _NULL_FLAG, /*  ` */     _NULL_FLAG, /*  a */     _NULL_FLAG, /*  b */     _NULL_FLAG, /*  c */
+                  _NULL_FLAG, /*  d */     _NULL_FLAG, /*  e */ _FORMATED_FLAG, /*  f */     _NULL_FLAG, /*  g */     _NULL_FLAG, /*  h */
+                  _NULL_FLAG, /*  i */     _NULL_FLAG, /*  j */     _NULL_FLAG, /*  k */     _NULL_FLAG, /*  l */     _NULL_FLAG, /*  m */
+                  _NULL_FLAG, /*  n */     _NULL_FLAG, /*  o */     _NULL_FLAG, /*  p */     _NULL_FLAG, /*  q */      _RAW_FLAG, /*  r */
+                  _NULL_FLAG, /*  s */     _NULL_FLAG, /*  t */  _UNICODE_FLAG, /*  u */     _NULL_FLAG, /*  v */     _NULL_FLAG, /*  w */
+                  _NULL_FLAG, /*  x */     _NULL_FLAG, /*  y */     _NULL_FLAG, /*  z */     _NULL_FLAG, /*  { */     _NULL_FLAG, /*  | */
+                  _NULL_FLAG, /*  } */     _NULL_FLAG, /*  ~ */                                                                                                // │
             };                                                                                                                                                 // │
-            constexpr static void *prefix[] = { &&_ASSIGN_STRING_PREFIX, &&_GET_STRING_PREFIX };                                                               // │
-            //sexy, instantaneous, O(~20) worst possible outcome to get string prefix                                                                          // │
+                                                                                                                                                               // │
+            /*                                                                                                                                                 // │
+             * //The below is the equivelent code                                                                                                              // │
+             * for(auto * c = Lstr.data(); !(*c == '"' || *c == '\''); ++c){                                                                                   // │
+             *      f ^= fmap[*c];                                                                                                                             // │
+             *      if(f == _NULL_FLAG){                                                                                                                       // │
+             *          exit(1);                                                                                                                               // │
+             *      }                                                                                                                                          // │
+             * }                                                                                                                                               // │
+             *                                                                                                                                                 // │
+             */                                                                                                                                                // │
+            //sexy, instantaneous                                                                                                                              // │
             uint_fast8_t f = 0;                                                                                                                                // │
             auto * c = Lstr.data();                                                                                                                            // │
-            for(uint_fast8_t j=0; j < 3; ++j, ++c){                                                                                                            // │
-                                                                                                                                                               // │
-                /*                                                                                                                                             // │
-                 * break out of the loop if " or ' else continue                                                                                               // │
-                 *  - unconditional jump can be predicted by the cpu                                                                                           // │
-                 * cast var c to uint_fast8_t in order to avoid warning                                                                                        // │
-                 */                                                                                                                                            // │
-                goto* prefix[                                      //if (c == string prefix){ goto _GET_STRING_PREFIX; }     ───>┐                             // │
-                                                                   //else                   { goto _ASSIGN_STRING_PREFIX; }  ────┼────────────>┐               // │
-                        pmap[static_cast<uint_fast8_t>(*c)]        //                                                            │             │               // │
-                ];                                                 //                                                            │             │               // │
-                _GET_STRING_PREFIX:                                // <─────────────────────────────────────────────────────────<┘             │               // │
-                                                                                                                                            // │               // │
-                //assign flag                                                                                                               // │               // │
-                //cast var c to uint_fast8_t in order to avoid warning                                                                      // │               // │
-                f ^= fmap[static_cast<uint_fast8_t>(*c)];                                                                                   // │               // │
-                                                                                                                                            // │               // │
-                /*                                                                                                                          // │               // │
-                 * the python interpreter throws an error if the prefix is specified twice, so we will too :(                               // │               // │
-                 * if someone for what ever reason wanted this not to thow and error and a more flexable experience,                        // │               // │
-                 * they could remove this, change the XOR above to an OR, and the compiler would still work ;)                              // │               // │
-                 */                                                                                                                         // │               // │
-                if(f == 0){                                                                                                                 // │               // │
-                    panic("Line %d:%d String prefix specified twice\n", Lexeme.lnum + 1, Lexeme.lpos);                                      // │               // │
-                }                                                                                                                           // │               // │
-            }                                                                                                                               // │               // │
-            /*                                                                                                                              // │               // │
-             * the below panic should never be executed, as when the above loop                                                             // │               // │
-             * finds a " or ' it will jump to _ASSIGN_STRING_PREFIX                                                                         // │               // │
-             * but just in case, it's here                                                                                                  // │               // │
-             */                                                                                                                             // │               // │
-            panic("Something went wrong at line %d in string prefix section\n"                                                              // │               // │
-                  "token -> [%s]\n", __LINE__, Lstr.c_str());                                                                               // │               // │
-                                                                                                                                            // │               // │
-            _ASSIGN_STRING_PREFIX:                                 // <───────────────────────────────────────────────────────────────────────<┘               // │
-            switch(f){                                                                                                                                         // │
-            case _RAW_FLAG     | _FORMATED_FLAG:{                                                                                                              // │
-                panic("Line %d:%d There is no such thing as a raw formatted string!\n", Lexeme.lnum + 1, Lexeme.lpos);                                         // │
-                }break;                                                                                                                                        // │
-            case _RAW_FLAG     | _UNICODE_FLAG:{                                                                                                               // │
-                panic("Line %d:%d There is no such thing as a raw unicode string!\n", Lexeme.lnum + 1, Lexeme.lpos);                                           // │
-                }break;                                                                                                                                        // │
-            case _UNICODE_FLAG | _FORMATED_FLAG:{                                                                                                              // │
-                flag |= turtle::token::flag::Data::DATA_TYPE_FORMATED_UNICODE_STRING;                                                                          // │
-                }break;                                                                                                                                        // │
-            case _FORMATED_FLAG:{                                                                                                                              // │
-                flag |= turtle::token::flag::Data::DATA_TYPE_FORMATED_STRING;                                                                                  // │
-                }break;                                                                                                                                        // │
-            case _RAW_FLAG:{                                                                                                                                   // │
-                flag |= turtle::token::flag::Data::DATA_TYPE_RAW_STRING;                                                                                       // │
-                }break;                                                                                                                                        // │
-            case _UNICODE_FLAG:{                                                                                                                               // │
-                flag |= turtle::token::flag::Data::DATA_TYPE_UNICODE_STRING;                                                                                   // │
-                }break;                                                                                                                                        // │
-            }                                                                                                                                                  // │
+            //takes around 12 clock cycles to transform the string prefix into a flag                                                                          // │
+            _GET_STRING_PREFIX:{                                                                                                                               // │
+                // ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────<┐              // │
+                // ↓                                                                                                                         // │              // │
+                    //assign flag                                                                                                            // │              // │
+                    //cast c to uint_fast8_t in order to avoid a warning                                                                     // │              // │
+                    f ^= *(fmap + *c);                                                                                                       // │              // │
+                                                                                                                                             // │              // │
+                    /*                                                                                                                       // │              // │
+                     * the python interpreter throws an error if the prefix is specified twice, so we will too :(                            // │              // │
+                     * if someone for what ever reason wanted this not to thow and error and have a more flexable experience,                // │              // │
+                     * they could change the XOR above to an OR, and the compiler would still work ;)                                        // │              // │
+                     */                                                                                                                      // │              // │
+                                                                                                                                             // │              // │
+                                                                                                                                             // │              // │
+               /*                                                                                                                            // │              // │
+                * break out of the loop if(c == '"' or c == '\'') else goto _GET_STRING_PREFIX;                                              // │              // │
+                *                                                                                                                            // │              // │
+                *  - unconditional jump can be predicted by the cpu                                                                          // │              // │
+                *  - using this method instead of a regualar for loop has certian advantages                                                 // │              // │
+                *    * no temporary "i" variable to increment, we're only incrementing the string pointer                                    // │              // │
+                *    * no comparison of max, i.e for(i < max; continue){}                                                                    // │              // │
+                *                                                                                                                            // │              // │
+                * cast var c to uint_fast8_t in order to avoid warning                                                                       // │              // │
+                *                                                                                                                            // │              // │
+                * note to future self:                                                                                                       // │              // │
+                *   pmap stands for prefix map                                                                                               // │              // │
+                */                                                                                                                           // │              // │
+                                                              // ++c;                                                                        // │              // │
+                goto **(pmap + *++c);                         //if( (*c == '"' || *c == '\"' ) == false ){                                   // │              // │
+                                                              //    goto _GET_STRING_PREFIX;                // ────────────────────────────────>┘              // │
+                                                              //}                                                                                              // │
+                                                              //else{                                                                                          // │
+                                                              //    goto _PUT_STRING_PREFIX;                // ┐                                               // │
+                                                              //}                                           // │                                               // │
+            }                                                                                               // │                                               // │
+                                                                                                            // │                                               // │
+            _PUT_STRING_PREFIX:  // <─────────────────────────────────────────────────────────────────────────<┘                                               // │
+            constexpr static turtle_flag tmap[]={
+                0,                                                            // 0 0b000 _NULL_FLAG                   // error: string prefix specified twice
+                turtle::token::flag::Data::DATA_TYPE_RAW_STRING,              // 1 0b001 _RAW_FLAG
+                turtle::token::flag::Data::DATA_TYPE_UNICODE_STRING,          // 2 0b010 _UNICODE_FLAG
+                0,                                                            // 3 0b011 _RAW_FLAG      |  _UNICODE_FLAG //error: no such thing as a rU string
+                turtle::token::flag::Data::DATA_TYPE_FORMATED_STRING,         // 4 0b100 _FORMATED_FLAG
+                0,                                                            // 5 0b101 _RAW_FLAG      | _FORMATED_FLAG //error: no such thing as a rF string
+                turtle::token::flag::Data::DATA_TYPE_FORMATED_UNICODE_STRING  // 6 0b110 _UNICODE_FLAG  | _FORMATED_FLAG
+            };
+            flag |= tmap[f];
+            if(flag == turtle::token::flag::Control::NULL_TOKEN){
+                constexpr uint_fast8_t preStrs[7] = {0,0,0,1};//lazy
+                constexpr const char * pres[] =  {"formatted", "unicode"};
+                switch(f){
+                    case _RAW_FLAG |  _UNICODE_FLAG:
+                    case _RAW_FLAG | _FORMATED_FLAG:
+                        panic("Line %d:%d Theres no such thing as a raw %s string\n", Lexeme.lnum + 1, Lexeme.lpos, pres[preStrs[f]]);
+                        break;
+                    case 0:
+                        panic("Line %d:%d String prefix specified twice\n", Lexeme.lnum + 1, Lexeme.lpos, pres[preStrs[f]]);
+                        break;
+                }
+            }
                                                                                                                                                                // │
         }                                                                                                                                                      // │
         [[fallthrough]];                                                                                                                                       // │
         case '"':                                                                                                                                              // │
         case '\'':{                                                                                                                                            // │
-            unsigned int len = Lstr.size();                                                                                                                    // │
-            if(len == 1){                                                                                                                                      // │
+            if(Lstr.length() == 1){                                                                                                                            // │
                 panic("Line %d:%d Non terminating string %c\n", Lexeme.lnum + 1, Lexeme.lpos, Lstr[0]);                                                        // │
             }                                                                                                                                                  // │
             flag |= turtle::token::flag::Data::DATA_TYPE_STRING | Document.data.size();                                                                        // │
@@ -518,7 +489,7 @@ void lex(turtle::Document &Document){
             break;
         }
 
-#ifdef DEBUG
+#if DEBUG_CPP
 
         std::string res = Lstr;
         if(res[0] == '\n' || res[0] == '\r'){
@@ -526,13 +497,13 @@ void lex(turtle::Document &Document){
                 res = std::regex_replace(res, std::regex(ex[0]), ex[1]);
             }
         }
-        std::ostringstream ss;
-        ss << std::bitset< sizeof(turtle_flag)*8 >(tmpNode.NodeFlags);
+        std::ostringstream snake_y;
+        snake_y << std::bitset< sizeof(turtle_flag)*8 >(tmpNode.NodeFlags);
         const std::string& flag_str = getFlagName(tmpNode.NodeFlags);
         std::string ws; //                        The token with the largest name is 32 characters long
         for(int i=0, size = flag_str.size(); i < (33 - size); ++i){ws+=' ';}
 
-        ss << " | Predicted token -> " << flag_str << ws
+        snake_y << " | Predicted token -> " << flag_str << ws
            << " | token -> [";
 
         //if string, format it so stays on the right margin instead of wraping in the console preview
@@ -543,13 +514,14 @@ void lex(turtle::Document &Document){
                 {}
             );
             for(uint_fast8_t i = 0; i < (uint_fast8_t)lines.size(); ++i){
-                if(i > 0){ss << '\n';}
-                ss << lines[i];
+                if(i > 0){snake_y << '\n';}
+                snake_y << lines[i];
             }
         } else {
-            ss << res;
+            snake_y << res;
         }
-        std::cout << ss.str() << "]\n";
+        //oh shit its a snakeeeee
+        std::cout << snake_y.str() << "]\n";
 
 #endif // ifdef DEBUG
 

@@ -40,11 +40,13 @@
  * 
  */
 
-#include <string>
+//#include <string>
 #include <stdint.h>
 #include <string.h>
 #include "global.h"
-#ifdef DEBUG
+
+
+#if DEBUG_CPP
   #include "enum.h"
 #else
   #define BETTER_ENUM(ENAME, TYPE, ...) \
@@ -55,13 +57,14 @@
         }
 #endif
 
+
 #include <boost/multiprecision/cpp_int.hpp>
 #include <boost/multiprecision/cpp_dec_float.hpp>
 #include <boost/any.hpp>
 
 namespace turtle {
     //In case I want to change it to something bigger in the future
-    typedef uint32_t turtle_flag;
+    typedef uint_fast32_t turtle_flag;
 
     typedef boost::multiprecision::cpp_int          turtle_int;
     typedef boost::multiprecision::cpp_dec_float_50 turtle_float;
@@ -76,10 +79,11 @@ namespace turtle {
 //      M_turtle_flag(N) (00000000 00000000 00000000 00000001 <<  N )
 #define M_turtle_flag(N) ((turtle_flag)1 << (N))
 
+//make constexpr in order to reduce compile time
 constexpr auto tokenTypeOffset = ( ((sizeof(turtle::turtle_flag) * 8) - (3 /* Number of Bits needed */)) );
 
 //Refer to the huge comment in the flag namespace on wtf this is & does
-#define M_typeFlagMacro(N) (N << tokenTypeOffset)
+#define M_typeFlagMacro(N) ((turtle_flag)N << tokenTypeOffset)
 
 struct Node
 {
@@ -96,7 +100,7 @@ struct Node
     inline constexpr bool test_bit(unsigned char i){
         return !!(NodeFlags & ((turtle::turtle_flag)1<<i));
     }
-    //extract bits then check flag integrety
+    //extract bits then check flag tegrety
     inline constexpr bool hasFlag(turtle::turtle_flag __f){
         return (NodeFlags & __f) == __f;
     }
@@ -112,12 +116,12 @@ namespace turtle
     //         \/
     //std::vector<struct Node> SemanticGroups
 
-#ifdef DEBUG
+#if DEBUG_CPP
     template <class T>
-    const char * flagstr(T values, turtle_flag flag){
-        for (auto c : values) {
-            if(c._to_integral() == flag){
-                return c._to_string();
+    constexpr const char * flagstr(T values, turtle_flag flag){
+        for (const auto& v : values) {
+            if(v._to_integral() == flag){
+                return v._to_string();
             }
         }
         return "";
@@ -163,10 +167,13 @@ namespace turtle
                     DATA_TYPE_INT,
                     DATA_TYPE_FLOAT,
                     DATA_TYPE_COMPLEX,
+                    DATA_TYPE_EXPONENTIAL,
+                    DATA_TYPE_HEX,
+                    DATA_TYPE_OCTAL,
             DATA_TYPE_, //unknown -- make effort to determine type
             DATA_TYPE_COMMENT
         )
-        #undef __ENUM_NAME
+        #undef /*cuz its*/__ENUM_NAME //sun
 
         #define __ENUM_NAME Operator
         BETTER_ENUM(__ENUM_NAME, turtle_flag,
@@ -181,7 +188,7 @@ namespace turtle
             DELIMITER_LEFT_OR_RIGHT_BRACE = DELIMITER_BRACE + 1, // 0 = Left, 1 = Right
             DELIMITER_CURVED_BRACE,                              // '(' or ')'
             DELIMITER_SQUARE_BRACE,                              // '[' or ']'
-            DELIMITER_CURLY_BRACE,                                // '{' or '}'
+            DELIMITER_CURLY_BRACE,                               // '{' or '}'
             DELIMITER_ASSIGN // '=' symbol
         )
         #undef __ENUM_NAME

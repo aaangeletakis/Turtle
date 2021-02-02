@@ -7,17 +7,29 @@
 #include <sstream>
 #include <codecvt>
 
-void readfile(const char *filename, std::string &data)
+void readfile(const char *filename, char * buffer)
 {
-    //https://stackoverflow.com/a/2602060
-    std::ifstream file(filename);
-
-    file.seekg(0, std::ios::end);
-    data.reserve(file.tellg());
-    file.seekg(0, std::ios::beg);
-
-    data.assign((std::istreambuf_iterator<char>(file)),
-                std::istreambuf_iterator<char>());
+    FILE *fh = fopen(filename, "rb");
+    if ( fh == NULL )
+    {
+        //like am i a joke to you?
+        //I should have read in between the lines ...
+        panic("Cannot open file\n");
+    }
+    fseek(fh, 0L, SEEK_END);
+    const size_t length = ftell(fh);
+    /*it's*/ rewind(fh); //timeeee
+    //avoid warning -- put in if statment
+    if(fread(buffer, length, sizeof(char), fh)){};
+    if(ferror(fh))
+    {
+        panic("Error reading file\n");
+    }
+    if(feof(fh))
+    {
+        panic("End of file reached while reading\n");
+    }
+    fclose(fh); fh = NULL;
 }
 
 /*void readFile(const char* filename, std::wstring& data)

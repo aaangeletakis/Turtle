@@ -15,13 +15,17 @@ int main(int argc, char *argv[])
 {
         //avoid warning
         argc+=0;argv+=0;
-        std::string filename = "test.py";
+        char filename[] = "test.py";
         turtle::Document Document;
         puts("Ready, Set, Go!");
         //set explicit scope to deallocate file data and save memory
         {
-                std::string file;
-                readfile(filename.c_str(), file);
+                // 2^22 = 4,194,304 bytes max
+                //~4 MB
+                constexpr size_t fsize_max  = 1 << 22;
+                char      buffer[fsize_max] = {0};
+                readfile(filename, buffer);
+                std::string file(std::move(buffer));
 
                 DEBUG_M(puts("Tokenizing");)
                 turtle::tokenize(file, Document.Lexemes);
