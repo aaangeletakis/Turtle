@@ -16,5 +16,4 @@ Known differences/"features" between turtle and python:
                             ___________________________
                  -> Line 1 |      import module
                     Line 2 |string = "Hello World!"
-    - Any backslash in a string must be escaped, even in a raw string
 
