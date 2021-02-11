@@ -87,10 +87,12 @@ constexpr auto tokenTypeOffset = ( ((sizeof(turtle::turtle_flag) * 8) - (3 /* Nu
 
 struct Node
 {
-    enum {NEXT, LAST};
     //Node
     turtle::turtle_flag NodeFlags = 0;
-    Node *node[2] = {0};
+    Node * next = 0;
+    Node * last = 0;
+    std::vector<Node *> children;
+
     uint_fast16_t linepos = 0;
     uint_fast16_t line = 0;
     inline constexpr auto type()
@@ -100,12 +102,23 @@ struct Node
     inline constexpr bool test_bit(unsigned char i){
         return !!(NodeFlags & ((turtle::turtle_flag)1<<i));
     }
-    //extract bits then check flag tegrety
+    //extract bits then check flag tegridy
     inline constexpr bool hasFlag(turtle::turtle_flag __f){
         return (NodeFlags & __f) == __f;
     }
     inline constexpr bool hasType(turtle::turtle_flag __f){
         return (NodeFlags >> tokenTypeOffset) == __f;
+    }
+    template<typename ValueType>
+    constexpr auto operator [](ValueType v){
+        return children[v];
+    }
+    template<typename ValueType>
+    constexpr auto reserve(ValueType v){
+        return children.reserve(v);
+    }
+    auto back(){
+        return children.back();
     }
 };
 
@@ -151,7 +164,8 @@ namespace turtle
         BETTER_ENUM(__ENUM_NAME, turtle_flag,
             NULL_TOKEN,
             HAS_VALUE = NULL_TOKEN,
-            NEWLINE
+            NEWLINE,
+            ENDMARKER
         )
         #undef __ENUM_NAME
 
@@ -182,6 +196,7 @@ namespace turtle
             DELIMITER_SEMICOLON,
             DELIMITER_COMMA,
             DELIMITER_PERIOD, // access token '.'
+            DELIMITER_ELLIPSIS, // ...
             DELIMITER_BRACE,
             //DELIMITER_ACCESS,
 
@@ -318,7 +333,8 @@ namespace turtle
             #define __ENUM_NAME Control
             BETTER_ENUM(__ENUM_NAME, turtle_flag,
                 NULL_TOKEN = 0 | flag::Type::CONTROL,
-                NEWLINE =    control_type_macro(M_turtle_flag(token::__ENUM_NAME::NEWLINE) | M_turtle_flag(token::__ENUM_NAME::HAS_VALUE) | flag::Type::CONTROL)
+                NEWLINE =    control_type_macro(M_turtle_flag(token::__ENUM_NAME::NEWLINE) | M_turtle_flag(token::__ENUM_NAME::HAS_VALUE) | flag::Type::CONTROL),
+                ENDMARKER =  control_type_macro(M_turtle_flag(token::__ENUM_NAME::ENDMARKER) | M_turtle_flag(token::__ENUM_NAME::HAS_VALUE) | flag::Type::CONTROL)
             )
             #undef __ENUM_NAME
 
@@ -419,6 +435,7 @@ namespace turtle
                 DELIMITER_SEMICOLON =               M_turtle_flag(token::__ENUM_NAME::DELIMITER_SEMICOLON)                  | flag::Type::DELIMITERS,
                 DELIMITER_COMMA =                   M_turtle_flag(token::__ENUM_NAME::DELIMITER_COMMA)                      | flag::Type::DELIMITERS,
                 DELIMITER_PERIOD =                  M_turtle_flag(token::__ENUM_NAME::DELIMITER_PERIOD)                     | flag::Type::DELIMITERS,
+                DELIMITER_ELLIPSIS =                M_turtle_flag(token::__ENUM_NAME::DELIMITER_ELLIPSIS)                     | flag::Type::DELIMITERS,
                 DELIMITER_ACCESS =                                                                               DELIMITER_PERIOD,
 
                 DELIMITER_BRACE =                   M_turtle_flag(token::__ENUM_NAME::DELIMITER_BRACE)                      | flag::Type::DELIMITERS,
@@ -561,6 +578,7 @@ namespace turtle
             {sti("}"),        token::flag::Operator::   DELIMITER_CURLY_RIGHT_BRACE},
             {sti("["),        token::flag::Operator::   DELIMITER_SQUARE_LEFT_BRACE},
             {sti("]"),        token::flag::Operator::   DELIMITER_SQUARE_RIGHT_BRACE},
+            {sti("..."),      token::flag::Operator::   DELIMITER_ELLIPSIS},
             {sti("."),        token::flag::Operator::   DELIMITER_PERIOD},
             {sti("="),        token::flag::Operator::   DELIMITER_ASSIGN},
             {sti("+"),        token::flag::Arithmetic:: ARITHMETIC_ADD},

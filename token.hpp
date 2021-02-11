@@ -11,6 +11,9 @@
 #include <array>
 #include <any>
 #include <algorithm>
+#include <boost/xpressive/xpressive.hpp>
+
+namespace re = boost::xpressive;
 
 namespace turtle {
 
@@ -68,8 +71,9 @@ struct _Lexeme  {
 struct Document
 {
     //Document Nodes
-    std::vector<_Lexeme> Lexemes;
+    std::vector<struct _Lexeme> Lexemes;
     std::vector<struct Node> Nodes;
+    std::vector<struct Node> Graph;
     std::vector<std::any> data;
 };
 
@@ -79,8 +83,8 @@ auto tokenize(std::string &filedata, std::vector<_Lexeme> &Lexemes)
 Paste into regex101.com
 Replace regex comments with R"()" by using \(\?#\s*\)
 
-[rRfFUu]{0,2}?("{3}|")(?:[^"]|\\.|\\)*\1|(?#
-)([rRfFUu]{0,2}?('{3}|')(?:[^']|\\.|\\)*\3)|(?#
+[rRfFUu]{0,2}?("{3}|")(?:[^\\"]|\\.|\\)*\1|(?#
+)([rRfFUu]{0,2}?('{3}|')(?:[^\\']|\\.|\\)*\3)|(?#
 )(#[^\r\n]*)|(?#
 )([\n\r][ \t]*)|(?#
 )(\\[^\r\n]*)|(?#
@@ -90,14 +94,14 @@ Replace regex comments with R"()" by using \(\?#\s*\)
     )|([0-9][0-9_]*\.[a-zA-Z]*)|(?#
     )(\.[0-9][0-9_]*[a-zA-Z]*)|(?#
     )([<>*\/]{2})=?|(?#
-    )([!%&*+\-<=>\/\\^|]=)(?#
+    )([!%&*+\-<=>\/\\^|:]=)(?#
 ))|(?#
 )([!-\/:-@\[-^{-~]|[^\s!-\/:-@\[-^{-~]+)
 */
     //when rEgEX is A LaNGUAgE
-    static std::regex TokenRegex(
-                 R"([rRfFUu]{0,2}?("{3}|")(?:[^"]|\\.|\\)*\1|)"        //capture " strings
-                R"(([rRfFUu]{0,2}?('{3}|')(?:[^']|\\.|\\)*\3)|)"       //capture ' strings
+    static const std::regex TokenRegex(
+                 R"([rRfFUu]{0,2}?("{3}|")(?:[^\\"]|\\.|\\)*\1|)"      //capture " strings
+                R"(([rRfFUu]{0,2}?('{3}|')(?:[^\\']|\\.|\\)*\3)|)"     //capture ' strings
                 R"((#[^\r\n]*)|)"                                      //capture comments
                 R"(([\n\r][ \t]*)|)"                                   //capture newlines
                 R"((\\[^\r\n]*)|)"                                     /* capture '\'andAnythingAfterTheBackslash  */
@@ -107,7 +111,7 @@ Replace regex comments with R"()" by using \(\?#\s*\)
                     R"(([0-9][0-9_]*\.[a-zA-Z]*)|)"                    //──┘│
                     R"((\.[0-9][0-9_]*[a-zA-Z]*)|)"                    //───┘
                     R"(([<>*\/]{2})=?|)"                               //capture 2-3 character operators
-                    R"(([!%&*+\-<=>\/\\^|]=))"                         //capture 2 caracter operators
+                    R"(([!%&*+\-<=>\/\\^|:]=))"                         //capture 2 caracter operators
                 R"()|)"
                 R"(([!-\/:-@\[-^{-~]|[^\s!-\/:-@\[-^{-~]+))"           //capture anything else
     );
@@ -127,13 +131,15 @@ Replace regex comments with R"()" by using \(\?#\s*\)
 }
 
 #if DEBUG_CPP
+
 //for debugging
 std::string getFlagName(turtle_flag flag)
 {
     switch(flag >> tokenTypeOffset){
     case token::Type::CONTROL:
         if(hasFlag(flag, token::flag::Control::NEWLINE)){
-            return (std::string("NEWLINE: WS -> ")+ std::to_string((flag ^ token::flag::Control::NEWLINE)));
+            //return (std::string("NEWLINE: WS -> ")+ std::to_string((flag ^ token::flag::Control::NEWLINE)));
+            return "NEWLINE";
         }
         return flagstr(token::flag::Control::_values(), flag);
         break;
@@ -214,46 +220,33 @@ void lex(turtle::Document &Document){
             }
             flag |= turtle::token::flag::Control::NEWLINE | (len-1);
             }break;
+        case '.':{
+            if(Lstr.back() == '.'){
+                goto _DEFUALT_FIND_TOKEN;
+            }
+        }
         //fucking numbers
         case '0' ... '9':{
+            uint_fast8_t type = 0;
+            enum {
+                RATIONAL_NUM,
+                EXPONENTIAL,
+                COMPLEX,
+                HEX_OR_OCTAL, //cuz they both have the same alphabet
+                BINARY
+            };
             switch(Lstr.size()){
                 default:{
-                enum {
-                    RATIONAL_NUM,
-                    EXPONENTIAL,
-                    COMPLEX,
-                    HEX_OR_OCTAL, //cuz they both have the same alphabet
-                    BINARY
-                };
                 //parsing the numbers is too complex
-                static std::regex regex [] = {
-                    std::regex(R"(^([0-9]|_)+$)"),
-                    std::regex(R"(^([0-9]|_)+[eE]([0-9]|_)+$)"),
-                    std::regex(R"(^([0-9]|_)+[jJ]$)"),
-                    std::regex(R"(^0[xXoO][0-9A-Fa-f_]+$)"),
-                    std::regex(R"(^0[bB]([01]|_)+$)")
+                static const std::regex regex [] = {
+                    std::regex(R"(^[0-9._]+$)"),
+                    std::regex(R"(^[0-9._]+[eE]+[0-9_]+$)"),
+                    std::regex(R"(^[0-9._]+[jJ]+$)"),
+                    std::regex(R"(^0[xXoO]+[0-9A-Fa-f_]+$)"),
+                    std::regex(R"(^0[bB]+[01_]+$)")
                 };
-                for(uint_fast8_t i = 0; i < sizeof(regex)/sizeof(regex[0]); ++i){
-                    if(std::regex_match(Lstr, regex[i])){
-                        switch(i){
-                        case EXPONENTIAL:
-                            panic("Exponetial numbers not supported cuz im not a nerd\n");
-                            break;
-                        case COMPLEX:
-                            panic("Compex numbers not supported cuz I don't know what they are\n");
-                            break;
-                        case BINARY:
-                            panic("Binary numbers not supported\n");
-                            break;
-                        case HEX_OR_OCTAL: break;
-                        case RATIONAL_NUM:
-                            //python outputs an error if your number is non zero but starts with zero
-                            if(std::regex_match(Lstr, std::regex(R"(^[0_]+[_1-9]+$)"))){
-                                panic("leading zeros in decimal integer literals are not permitted; "
-                                      "use an 0o prefix for octal integers\n");
-                            }
-                            break;
-                        }
+                for(;type < sizeof(regex)/sizeof(regex[0]); ++type){
+                    if(std::regex_match(Lstr, regex[type])){
                         goto _DATA_TYPE_NUMBER;
                     }
                 }
@@ -261,17 +254,70 @@ void lex(turtle::Document &Document){
                 }break;
                 case 1:break;
             }
+
             _DATA_TYPE_NUMBER:
-            std::string num('\0', Lstr.size());
-            std::copy_if(Lstr.begin(), Lstr.end(),  std::back_inserter(num),
-                [](auto c){
-                    return c != '_';
+            auto remove_underscores = [](const std::string & str){
+                return std::regex_replace(str, std::regex("_"), "");
+            };
+            std::string num_str(remove_underscores(Lstr));
+            switch(type){
+            case EXPONENTIAL:
+                panic("Exponetial numbers not supported cuz im not a nerd\n");
+                break;
+            case COMPLEX:
+                panic("Compex numbers not supported cuz I don't know what they are\n");
+                break;
+            case BINARY:
+                //panic("Binary numbers not supported\n");
+            {
+
+                auto bin_str = std::regex_replace(num_str, std::regex(R"(^0+[bB0]+)"), "");
+                //prevent internal overflow by getting the sizeof( the return type of (std::stoull) ) * 8
+                if(bin_str.size() > sizeof ( unsigned long long ) * 8 ){
+                    //if the highest set bit index is greater than 64 bits throw an error
+                    panic("Binary literal greater than 64 bits\n");
+
                 }
-            );
+                //eFfiCIENCY
+                //convert base 2 number to a base 10 int and then convert back to a string
+                num_str = std::to_string(
+                            std::stoull(
+                                bin_str,
+                            0, 2)
+                          );
+            }
+                break;
+            case HEX_OR_OCTAL:
+                if(std::regex_match(Lstr, std::regex(R"(^0+[oO].*)"))){
+                    std::string octal_str(std::regex_replace(num_str, std::regex(R"(^0+[oO]+)"), ""));
+                    try {
+                        num_str = std::to_string(
+                                    std::stoull(
+                                        octal_str,
+                                    0, 8)
+                                  );
+                    } catch (...){
+                        panic("Invalid octal literal\n");
+                    }
+                } else {
+                    num_str = std::regex_replace(num_str, std::regex(R"(^0+[xX]+)"), "0x");
+                }break;
+            case RATIONAL_NUM:
+                //python outputs an error if your number is non zero but starts with zero
+                if(std::regex_match(num_str, std::regex(R"(^[0_]+[._1-9]+$)"))){
+                    panic("leading zeros in decimal integer literals are not permitted; "
+                          "use an 0o prefix for octal integers\n");
+                }
+            }
+
+            if(std::regex_match(num_str, std::regex(R"(\.)"))){
+                panic("Floating point numbers not supported yet\n");
+            }
+
             flag |= turtle::token::flag::Data::DATA_TYPE_NUMBER | Document.data.size();
             Document.data.push_back(
                         std::pair<std::string_view, turtle_int>(
-                            {(std::string_view)Lstr, turtle_int(num)}
+                            {(std::string_view)Lstr, turtle_int(num_str)}
                         )
             );
         }break;
@@ -299,53 +345,6 @@ void lex(turtle::Document &Document){
                 _RAW_FLAG      = 0b001,                                                                                      // │
                 _UNICODE_FLAG  = 0b010,                                                                                      // │
                 _FORMATED_FLAG = 0b100,                                                                                      // │
-            };                                                                                                               // │
-            //Generated via python program                                                                                   // │
-            //Use this to tell if we've found a string prefix [rRuUfF]                                                       // │
-            constexpr static void * pmap[] = {                                                                               // │
-                &&_PUT_STRING_PREFIX, /*  0 */ &&_PUT_STRING_PREFIX, /*  1 */ &&_PUT_STRING_PREFIX, /*  2 */                 // │
-                &&_PUT_STRING_PREFIX, /*  3 */ &&_PUT_STRING_PREFIX, /*  4 */ &&_PUT_STRING_PREFIX, /*  5 */                 // │
-                &&_PUT_STRING_PREFIX, /*  6 */ &&_PUT_STRING_PREFIX, /*  7 */ &&_PUT_STRING_PREFIX, /*  8 */                 // │
-                &&_PUT_STRING_PREFIX, /*  9 */ &&_PUT_STRING_PREFIX, /* 10 */ &&_PUT_STRING_PREFIX, /* 11 */                 // │
-                &&_PUT_STRING_PREFIX, /* 12 */ &&_PUT_STRING_PREFIX, /* 13 */ &&_PUT_STRING_PREFIX, /* 14 */                 // │
-                &&_PUT_STRING_PREFIX, /* 15 */ &&_PUT_STRING_PREFIX, /* 16 */ &&_PUT_STRING_PREFIX, /* 17 */                 // │
-                &&_PUT_STRING_PREFIX, /* 18 */ &&_PUT_STRING_PREFIX, /* 19 */ &&_PUT_STRING_PREFIX, /* 20 */                 // │
-                &&_PUT_STRING_PREFIX, /* 21 */ &&_PUT_STRING_PREFIX, /* 22 */ &&_PUT_STRING_PREFIX, /* 23 */                 // │
-                &&_PUT_STRING_PREFIX, /* 24 */ &&_PUT_STRING_PREFIX, /* 25 */ &&_PUT_STRING_PREFIX, /* 26 */                 // │
-                &&_PUT_STRING_PREFIX, /* 27 */ &&_PUT_STRING_PREFIX, /* 28 */ &&_PUT_STRING_PREFIX, /* 29 */                 // │
-                &&_PUT_STRING_PREFIX, /* 30 */ &&_PUT_STRING_PREFIX, /* 31 */ &&_PUT_STRING_PREFIX, /* 32 */                 // │
-                &&_PUT_STRING_PREFIX, /*  ! */ &&_PUT_STRING_PREFIX, /*  " */ &&_PUT_STRING_PREFIX, /*  # */                 // │
-                &&_PUT_STRING_PREFIX, /*  $ */ &&_PUT_STRING_PREFIX, /*  % */ &&_PUT_STRING_PREFIX, /*  & */                 // │
-                &&_PUT_STRING_PREFIX, /*  ' */ &&_PUT_STRING_PREFIX, /*  ( */ &&_PUT_STRING_PREFIX, /*  ) */                 // │
-                &&_PUT_STRING_PREFIX, /*  * */ &&_PUT_STRING_PREFIX, /*  + */ &&_PUT_STRING_PREFIX, /*  , */                 // │
-                &&_PUT_STRING_PREFIX, /*  - */ &&_PUT_STRING_PREFIX, /*  . */ &&_PUT_STRING_PREFIX, /*  / */                 // │
-                &&_PUT_STRING_PREFIX, /*  0 */ &&_PUT_STRING_PREFIX, /*  1 */ &&_PUT_STRING_PREFIX, /*  2 */                 // │
-                &&_PUT_STRING_PREFIX, /*  3 */ &&_PUT_STRING_PREFIX, /*  4 */ &&_PUT_STRING_PREFIX, /*  5 */                 // │
-                &&_PUT_STRING_PREFIX, /*  6 */ &&_PUT_STRING_PREFIX, /*  7 */ &&_PUT_STRING_PREFIX, /*  8 */                 // │
-                &&_PUT_STRING_PREFIX, /*  9 */ &&_PUT_STRING_PREFIX, /*  : */ &&_PUT_STRING_PREFIX, /*  ; */                 // │
-                &&_PUT_STRING_PREFIX, /*  < */ &&_PUT_STRING_PREFIX, /*  = */ &&_PUT_STRING_PREFIX, /*  > */                 // │
-                &&_PUT_STRING_PREFIX, /*  ? */ &&_PUT_STRING_PREFIX, /*  @ */ &&_PUT_STRING_PREFIX, /*  A */                 // │
-                &&_PUT_STRING_PREFIX, /*  B */ &&_PUT_STRING_PREFIX, /*  C */ &&_PUT_STRING_PREFIX, /*  D */                 // │
-                &&_PUT_STRING_PREFIX, /*  E */ &&_GET_STRING_PREFIX, /*  F */ &&_PUT_STRING_PREFIX, /*  G */                 // │
-                &&_PUT_STRING_PREFIX, /*  H */ &&_PUT_STRING_PREFIX, /*  I */ &&_PUT_STRING_PREFIX, /*  J */                 // │
-                &&_PUT_STRING_PREFIX, /*  K */ &&_PUT_STRING_PREFIX, /*  L */ &&_PUT_STRING_PREFIX, /*  M */                 // │
-                &&_PUT_STRING_PREFIX, /*  N */ &&_PUT_STRING_PREFIX, /*  O */ &&_PUT_STRING_PREFIX, /*  P */                 // │
-                &&_PUT_STRING_PREFIX, /*  Q */ &&_GET_STRING_PREFIX, /*  R */ &&_PUT_STRING_PREFIX, /*  S */                 // │
-                &&_PUT_STRING_PREFIX, /*  T */ &&_GET_STRING_PREFIX, /*  U */ &&_PUT_STRING_PREFIX, /*  V */                 // │
-                &&_PUT_STRING_PREFIX, /*  W */ &&_PUT_STRING_PREFIX, /*  X */ &&_PUT_STRING_PREFIX, /*  Y */                 // │
-                &&_PUT_STRING_PREFIX, /*  Z */ &&_PUT_STRING_PREFIX, /*  [ */ &&_PUT_STRING_PREFIX, /*  \ */                 // │
-                &&_PUT_STRING_PREFIX, /*  ] */ &&_PUT_STRING_PREFIX, /*  ^ */ &&_PUT_STRING_PREFIX, /*  _ */                 // │
-                &&_PUT_STRING_PREFIX, /*  ` */ &&_PUT_STRING_PREFIX, /*  a */ &&_PUT_STRING_PREFIX, /*  b */                 // │
-                &&_PUT_STRING_PREFIX, /*  c */ &&_PUT_STRING_PREFIX, /*  d */ &&_PUT_STRING_PREFIX, /*  e */                 // │
-                &&_GET_STRING_PREFIX, /*  f */ &&_PUT_STRING_PREFIX, /*  g */ &&_PUT_STRING_PREFIX, /*  h */                 // │
-                &&_PUT_STRING_PREFIX, /*  i */ &&_PUT_STRING_PREFIX, /*  j */ &&_PUT_STRING_PREFIX, /*  k */                 // │
-                &&_PUT_STRING_PREFIX, /*  l */ &&_PUT_STRING_PREFIX, /*  m */ &&_PUT_STRING_PREFIX, /*  n */                 // │
-                &&_PUT_STRING_PREFIX, /*  o */ &&_PUT_STRING_PREFIX, /*  p */ &&_PUT_STRING_PREFIX, /*  q */                 // │
-                &&_GET_STRING_PREFIX, /*  r */ &&_PUT_STRING_PREFIX, /*  s */ &&_PUT_STRING_PREFIX, /*  t */                 // │
-                &&_GET_STRING_PREFIX, /*  u */ &&_PUT_STRING_PREFIX, /*  v */ &&_PUT_STRING_PREFIX, /*  w */                 // │
-                &&_PUT_STRING_PREFIX, /*  x */ &&_PUT_STRING_PREFIX, /*  y */ &&_PUT_STRING_PREFIX, /*  z */                 // │
-                &&_PUT_STRING_PREFIX, /*  { */ &&_PUT_STRING_PREFIX, /*  | */ &&_PUT_STRING_PREFIX, /*  } */                 // │
-                &&_PUT_STRING_PREFIX, /*  ~ */                                                                               // │
             };                                                                                                               // │
                                                                                                                              // └>───────────────────────────────>┐
             /*                                                                                                                                                 // │
@@ -393,76 +392,35 @@ void lex(turtle::Document &Document){
                   _NULL_FLAG, /*  } */     _NULL_FLAG, /*  ~ */                                                                                                // │
             };                                                                                                                                                 // │
                                                                                                                                                                // │
-            /*                                                                                                                                                 // │
-             * //The below is the equivelent code                                                                                                              // │
-             * for(auto * c = Lstr.data(); !(*c == '"' || *c == '\''); ++c){                                                                                   // │
-             *      f ^= fmap[*c];                                                                                                                             // │
-             *      if(f == _NULL_FLAG){                                                                                                                       // │
-             *          exit(1);                                                                                                                               // │
-             *      }                                                                                                                                          // │
-             * }                                                                                                                                               // │
-             *                                                                                                                                                 // │
-             */                                                                                                                                                // │
             //sexy, instantaneous                                                                                                                              // │
             uint_fast8_t f = 0;                                                                                                                                // │
-            auto * c = Lstr.data();                                                                                                                            // │
-            //takes around 12 clock cycles to transform the string prefix into a flag                                                                          // │
-            _GET_STRING_PREFIX:{                                                                                                                               // │
-                // ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────<┐              // │
-                // ↓                                                                                                                         // │              // │
-                    //assign flag                                                                                                            // │              // │
-                    //cast c to uint_fast8_t in order to avoid a warning                                                                     // │              // │
-                    f ^= *(fmap + *c);                                                                                                       // │              // │
-                                                                                                                                             // │              // │
-                    /*                                                                                                                       // │              // │
-                     * the python interpreter throws an error if the prefix is specified twice, so we will too :(                            // │              // │
-                     * if someone for what ever reason wanted this not to thow and error and have a more flexable experience,                // │              // │
-                     * they could change the XOR above to an OR, and the compiler would still work ;)                                        // │              // │
-                     */                                                                                                                      // │              // │
-                                                                                                                                             // │              // │
-                                                                                                                                             // │              // │
-               /*                                                                                                                            // │              // │
-                * break out of the loop if(c == '"' or c == '\'') else goto _GET_STRING_PREFIX;                                              // │              // │
-                *                                                                                                                            // │              // │
-                *  - unconditional jump can be predicted by the cpu                                                                          // │              // │
-                *  - using this method instead of a regualar for loop has certian advantages                                                 // │              // │
-                *    * no temporary "i" variable to increment, we're only incrementing the string pointer                                    // │              // │
-                *    * no comparison of max, i.e for(i < max; continue){}                                                                    // │              // │
-                *                                                                                                                            // │              // │
-                * cast var c to uint_fast8_t in order to avoid warning                                                                       // │              // │
-                *                                                                                                                            // │              // │
-                * note to future self:                                                                                                       // │              // │
-                *   pmap stands for prefix map                                                                                               // │              // │
-                */                                                                                                                           // │              // │
-                                                              // ++c;                                                                        // │              // │
-                goto **(pmap + *++c);                         //if( (*c == '"' || *c == '\"' ) == false ){                                   // │              // │
-                                                              //    goto _GET_STRING_PREFIX;                // ────────────────────────────────>┘              // │
-                                                              //}                                                                                              // │
-                                                              //else{                                                                                          // │
-                                                              //    goto _PUT_STRING_PREFIX;                // ┐                                               // │
-                                                              //}                                           // │                                               // │
-            }                                                                                               // │                                               // │
-                                                                                                            // │                                               // │
-            _PUT_STRING_PREFIX:  // <─────────────────────────────────────────────────────────────────────────<┘                                               // │
+            for(auto * c = Lstr.data(); !(*c == '"' || *c == '\''); ++c){
+                f ^= *(fmap + *c);
+            }
             constexpr static turtle_flag tmap[]={
-                0,                                                            // 0 0b000 _NULL_FLAG                   // error: string prefix specified twice
+                    turtle::token::flag::Control::NULL_TOKEN,                 // 0 0b000 _NULL_FLAG                   // error: string prefix specified twice
+
                 turtle::token::flag::Data::DATA_TYPE_RAW_STRING,              // 1 0b001 _RAW_FLAG
                 turtle::token::flag::Data::DATA_TYPE_UNICODE_STRING,          // 2 0b010 _UNICODE_FLAG
-                0,                                                            // 3 0b011 _RAW_FLAG      |  _UNICODE_FLAG //error: no such thing as a rU string
+
+                    turtle::token::flag::Control::NULL_TOKEN,                 // 3 0b011 _RAW_FLAG      |  _UNICODE_FLAG //error: no such thing as a rU string
+
                 turtle::token::flag::Data::DATA_TYPE_FORMATED_STRING,         // 4 0b100 _FORMATED_FLAG
-                0,                                                            // 5 0b101 _RAW_FLAG      | _FORMATED_FLAG //error: no such thing as a rF string
+
+                    turtle::token::flag::Control::NULL_TOKEN,                 // 5 0b101 _RAW_FLAG      | _FORMATED_FLAG //error: no such thing as a rF string
+
                 turtle::token::flag::Data::DATA_TYPE_FORMATED_UNICODE_STRING  // 6 0b110 _UNICODE_FLAG  | _FORMATED_FLAG
             };
             flag |= tmap[f];
             if(flag == turtle::token::flag::Control::NULL_TOKEN){
-                constexpr uint_fast8_t preStrs[7] = {0,0,0,1};//lazy
+                constexpr uint_fast8_t preStrs[7] = {0,0,0,1};//im lazy
                 constexpr const char * pres[] =  {"formatted", "unicode"};
                 switch(f){
                     case _RAW_FLAG |  _UNICODE_FLAG:
                     case _RAW_FLAG | _FORMATED_FLAG:
                         panic("Line %d:%d Theres no such thing as a raw %s string\n", Lexeme.lnum + 1, Lexeme.lpos, pres[preStrs[f]]);
                         break;
-                    case 0:
+                    case _NULL_FLAG:
                         panic("Line %d:%d String prefix specified twice\n", Lexeme.lnum + 1, Lexeme.lpos, pres[preStrs[f]]);
                         break;
                 }
@@ -490,7 +448,9 @@ void lex(turtle::Document &Document){
         }
 
 #if DEBUG_CPP
-
+        auto whitespace = [](const size_t& size){
+            return std::string(size, ' ');
+        };
         std::string res = Lstr;
         if(res[0] == '\n' || res[0] == '\r'){
             for(auto& ex : character_substitutions){
@@ -498,24 +458,24 @@ void lex(turtle::Document &Document){
             }
         }
         std::ostringstream snake_y;
-        snake_y << std::bitset< sizeof(turtle_flag)*8 >(tmpNode.NodeFlags);
+        snake_y << std::bitset< sizeof(turtle_flag) * 8 >(tmpNode.NodeFlags);
         const std::string& flag_str = getFlagName(tmpNode.NodeFlags);
-        std::string ws; //                        The token with the largest name is 32 characters long
-        for(int i=0, size = flag_str.size(); i < (33 - size); ++i){ws+=' ';}
 
-        snake_y << " | Predicted token -> " << flag_str << ws
-           << " | token -> [";
+        //                                                                                                      ~~ 33 spaces ~~
+        snake_y << " | Predicted token -> " << flag_str << (flag_str.size() + static_cast<const char *>("                                 "))
+                << " | token -> [";
 
         //if string, format it so stays on the right margin instead of wraping in the console preview
-        if(res[0] == '"' || res[0] == '\''){
-            static std::regex regex(R"(\n)");
+        if(tmpNode.hasFlag(turtle::token::flag::Data::DATA_TYPE_STRING)){
+            static const std::regex regex(R"(\n|\r)");
             std::vector<std::string> lines(
                 std::sregex_token_iterator(res.begin(), res.end(), regex, -1),
                 {}
             );
+            const auto lnbuffsize = snake_y.str().size();
             for(uint_fast8_t i = 0; i < (uint_fast8_t)lines.size(); ++i){
-                if(i > 0){snake_y << '\n';}
-                snake_y << lines[i];
+                if(i){snake_y << '\n' << whitespace(lnbuffsize);}
+                snake_y <<  lines[i];
             }
         } else {
             snake_y << res;

@@ -12,7 +12,7 @@ void readfile(const char *filename, char * buffer)
     FILE *fh = fopen(filename, "rb");
     if ( fh == NULL )
     {
-        //like am i a joke to you?
+        //am i a joke to you?
         //I should have read in between the lines ...
         panic("Cannot open file\n");
     }
