@@ -32,19 +32,6 @@ void readfile(const char *filename, char * buffer)
     fclose(fh); fh = NULL;
 }
 
-/*void readFile(const char* filename, std::wstring& data)
-{
-    std::wifstream wfile(filename);
-    std::locale::global(std::locale(std::locale(), new std::codecvt_utf8<wchar_t>));
-
-    wfile.seekg(0, std::ios::end);
-    data.reserve(wfile.tellg());
-    wfile.seekg(0, std::ios::beg);
-
-    data.assign((std::istreambuf_iterator<wchar_t>(wfile)),
-                 std::istreambuf_iterator<wchar_t>());
-}*/
-
 void writefile(const char *filename, std::string &data)
 {
     std::ofstream file(filename);
