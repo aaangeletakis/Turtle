@@ -17,7 +17,8 @@
  * ment for you, but me, as I have a terrible memory.
  * 
  * The use of enums are really great as they can be
- * used for pre-calculated magic numbers
+ * used for pre-calculated magic numbers.
+ * What we need to do is take the "magic" out of magic numbers.
  *
  * Currently the the token flag is represented by a 32 bit unsigned integer.
  *
@@ -44,23 +45,11 @@
 #include <stdint.h>
 #include <string.h>
 #include "global.h"
-
-
-#if DEBUG_CPP
-  #include "enum.h"
-#else
-  #define BETTER_ENUM(ENAME, TYPE, ...) \
-        namespace  ENAME {              \
-            enum {                      \
-                __VA_ARGS__             \
-            };                          \
-        }
-#endif
-
+#include <cmath>
 
 #include <boost/multiprecision/cpp_int.hpp>
 #include <boost/multiprecision/cpp_dec_float.hpp>
-#include <boost/any.hpp>
+#include <any>
 
 namespace turtle {
     //In case I want to change it to something bigger in the future
@@ -68,8 +57,8 @@ namespace turtle {
 
     typedef boost::multiprecision::cpp_int          turtle_int;
     typedef boost::multiprecision::cpp_dec_float_50 turtle_float;
-    typedef boost::any                              turtle_any;
-    using   boost::any_cast;
+    typedef std::any                                turtle_any;
+    using   std::any_cast;
 
     typedef turtle_int                              t_int;
     typedef turtle_float                            t_float;
@@ -77,21 +66,78 @@ namespace turtle {
 }
 
 //      M_turtle_flag(N) (00000000 00000000 00000000 00000001 <<  N )
-#define M_turtle_flag(N) ((turtle_flag)1 << (N))
+#define M_turtle_flag(N) ((turtle::turtle_flag)1 << (N))
 
+constexpr turtle::turtle_flag constexpr_ceil(const float num)
+{
+    return (static_cast<float>(static_cast<turtle::turtle_flag>(num)) == num)
+        ? static_cast<turtle::turtle_flag>(num)
+        : static_cast<turtle::turtle_flag>(num) + ((num > 0) ? 1 : 0);
+}
+
+constexpr size_t Log2(const size_t n)
+{
+    return ( (n<2) ? 0 : 1+Log2(n / 2));
+}
+constexpr size_t num_of_bits_required(const size_t max){
+    return constexpr_ceil(Log2(max)+1);
+}
+#define bit_range_will_not_overflow(r1, r2) ((r1 + r2) < bits_in_turtle_flag)
+#define bit_range_will_not_underflow(r1) (r1 >= 0)
+#define CHECK_BIT_RANGE(BITS_NEEDED, MESSAGE) \
+    static_assert(          \
+           bit_range_will_not_overflow(num_of_bits_required_for_token_type, (BITS_NEEDED) ) \
+        && bit_range_will_not_underflow(BITS_NEEDED), \
+        MESSAGE \
+    )
+
+#if DEBUG_CPP
+  #include "enum.h"
+  #define TURTLE_CLASS(ENAME, ...)      \
+        BETTER_ENUM(ENAME, turtle_flag, \
+            __VA_ARGS__,                \
+            NUMBER_OF_ENUMS             \
+        )
+#else
+  #define TURTLE_CLASS(ENAME, ...) \
+        namespace  ENAME {               \
+            enum {                       \
+                __VA_ARGS__,             \
+                NUMBER_OF_ENUMS          \
+            };                           \
+        }
+#endif
+
+namespace turtle::token {
+    #define __ENUM_NAME Type
+    TURTLE_CLASS(__ENUM_NAME,
+        CONTROL,
+        DELIMITERS, // such as '(' or ')' or '.' or '[' or ']' ','
+        ARITHMETIC,
+        KEYWORD,    // any builtin type
+        DATA,       // such as a number or string
+        IDENTIFIER  // any label
+    )
+    #undef __ENUM_NAME
+}
+
+
+constexpr auto num_of_bits_required_for_token_type = num_of_bits_required(turtle::token::Type::NUMBER_OF_ENUMS);
+constexpr auto bits_in_turtle_flag = (sizeof(turtle::turtle_flag) * 8);
 //make constexpr in order to reduce compile time
-constexpr auto tokenTypeOffset = ( ((sizeof(turtle::turtle_flag) * 8) - (3 /* Number of Bits needed */)) );
+constexpr auto tokenTypeOffset = (bits_in_turtle_flag - num_of_bits_required_for_token_type);
+
+CHECK_BIT_RANGE(num_of_bits_required(turtle::token::Type::NUMBER_OF_ENUMS), "Too many token types" );
 
 //Refer to the huge comment in the flag namespace on wtf this is & does
-#define M_typeFlagMacro(N) ((turtle_flag)N << tokenTypeOffset)
+#define M_typeFlagMacro(N) ((turtle::turtle_flag)N << tokenTypeOffset)
 
 struct Node
 {
     //Node
     turtle::turtle_flag NodeFlags = 0;
-    Node * next = 0;
-    Node * last = 0;
-    std::vector<Node *> children;
+    Node * npx = 0;                    //node pointer xor-ed
+    Node * child = 0;
 
     uint_fast16_t linepos = 0;
     uint_fast16_t line = 0;
@@ -99,26 +145,20 @@ struct Node
     {
         return NodeFlags >> tokenTypeOffset;
     }
-    inline constexpr bool test_bit(unsigned char i){
-        return !!(NodeFlags & ((turtle::turtle_flag)1<<i));
+    inline constexpr auto type_of(turtle::turtle_flag __f)
+    {
+        return __f >> tokenTypeOffset;
+    }
+    inline constexpr auto test_bit(unsigned char i){
+        return (NodeFlags & ((turtle::turtle_flag)1<<i));
+    }
+    inline constexpr auto hasType(turtle::turtle_flag __f){
+        return type() == __f;
     }
     //extract bits then check flag tegridy
-    inline constexpr bool hasFlag(turtle::turtle_flag __f){
-        return (NodeFlags & __f) == __f;
-    }
-    inline constexpr bool hasType(turtle::turtle_flag __f){
-        return (NodeFlags >> tokenTypeOffset) == __f;
-    }
-    template<typename ValueType>
-    constexpr auto operator [](ValueType v){
-        return children[v];
-    }
-    template<typename ValueType>
-    constexpr auto reserve(ValueType v){
-        return children.reserve(v);
-    }
-    auto back(){
-        return children.back();
+    inline constexpr auto hasFlag(const turtle::turtle_flag __f){
+        return     (NodeFlags & __f) == __f
+                &&  hasType(type_of(__f));
     }
 };
 
@@ -148,29 +188,24 @@ namespace turtle
     namespace token
     {
 
-        #define __ENUM_NAME Type
-        BETTER_ENUM(__ENUM_NAME, turtle_flag,
-            CONTROL,
-            DELIMITERS, // such as '(' or ')' or '.' or '[' or ']' ','
-            ARITHMETIC,
-            KEYWORD,    // any builtin type
-            DATA,       // such as a number or string
-            IDENTIFIER//, // any label
-            //NUMBER_OF_BUILTIN_TYPES
-        )
-        #undef __ENUM_NAME
+
 
         #define __ENUM_NAME Control
-        BETTER_ENUM(__ENUM_NAME, turtle_flag,
+        TURTLE_CLASS(__ENUM_NAME,
             NULL_TOKEN,
             HAS_VALUE = NULL_TOKEN,
             NEWLINE,
-            ENDMARKER
+            NL,
+            ENDMARKER,
+            ERROR,
+            ERRORTOKEN,
+            TokenError,
+            UNSUPPORTED
         )
         #undef __ENUM_NAME
 
         #define __ENUM_NAME Data
-        BETTER_ENUM(__ENUM_NAME, turtle_flag,
+        TURTLE_CLASS(__ENUM_NAME,
             DATA_TYPE_STRING,
                 DATA_TYPE_RAW, // Used in combination with the string flag
                 DATA_TYPE_FORMATTED,
@@ -190,13 +225,14 @@ namespace turtle
         #undef /*cuz its*/__ENUM_NAME //sun
 
         #define __ENUM_NAME Operator
-        BETTER_ENUM(__ENUM_NAME, turtle_flag,
+        TURTLE_CLASS(__ENUM_NAME,
             DELIMITER_AT_SIGN, // '@' Python decorator, akin to passing a function pointer
             DELIMITER_COLON,   // ':' symbol
             DELIMITER_SEMICOLON,
             DELIMITER_COMMA,
             DELIMITER_PERIOD, // access token '.'
             DELIMITER_ELLIPSIS, // ...
+            DELIMINAR_RARROW,
             DELIMITER_BRACE,
             //DELIMITER_ACCESS,
 
@@ -210,7 +246,7 @@ namespace turtle
 
         //like identifiers these will be represented as integers
         #define __ENUM_NAME Keyword
-        BETTER_ENUM(__ENUM_NAME, turtle_flag,
+        TURTLE_CLASS(__ENUM_NAME,
             KEYWORD_FALSE,
             KEYWORD_CLASS,
             KEYWORD_FINALLY,
@@ -248,7 +284,7 @@ namespace turtle
         #undef __ENUM_NAME
 
         #define __ENUM_NAME Arithmetic
-        BETTER_ENUM(__ENUM_NAME, turtle_flag,
+        TURTLE_CLASS(__ENUM_NAME,
             ARITHMETIC_OPERATION = 0, // 1 = ARITHMETIC, 0 = LOGICAL (greater than, less than, equal to, not)
 
             ARITHMETIC_ADD,
@@ -303,7 +339,7 @@ namespace turtle
              *      (TokenFlag >> ( ( sizeof(TURTLES_FLAG_DATA_TYPE) * 8 ) - 4 ) )
              */
             #define __ENUM_NAME Type
-            BETTER_ENUM(__ENUM_NAME, turtle_flag,
+            TURTLE_CLASS(__ENUM_NAME,
                 CONTROL =    M_typeFlagMacro(token::__ENUM_NAME::CONTROL),
                 DELIMITERS = M_typeFlagMacro(token::__ENUM_NAME::DELIMITERS),
                 ARITHMETIC = M_typeFlagMacro(token::__ENUM_NAME::ARITHMETIC),
@@ -329,13 +365,20 @@ namespace turtle
              *     │└─────────────────────────────┴──> Amount Of whitespace
              *     └────> Is newline
              */
-            #define control_type_macro(N) ( (N) << (tokenTypeOffset - 3) )
+
             #define __ENUM_NAME Control
-            BETTER_ENUM(__ENUM_NAME, turtle_flag,
+            #define offset (tokenTypeOffset - token::__ENUM_NAME::NUMBER_OF_ENUMS)
+            #define control_type_macro(N) ( (N) << offset )
+            TURTLE_CLASS(__ENUM_NAME,
                 NULL_TOKEN = 0 | flag::Type::CONTROL,
                 NEWLINE =    control_type_macro(M_turtle_flag(token::__ENUM_NAME::NEWLINE) | M_turtle_flag(token::__ENUM_NAME::HAS_VALUE) | flag::Type::CONTROL),
-                ENDMARKER =  control_type_macro(M_turtle_flag(token::__ENUM_NAME::ENDMARKER) | M_turtle_flag(token::__ENUM_NAME::HAS_VALUE) | flag::Type::CONTROL)
+                ENDMARKER =  control_type_macro(M_turtle_flag(token::__ENUM_NAME::ENDMARKER) | M_turtle_flag(token::__ENUM_NAME::HAS_VALUE) | flag::Type::CONTROL),
+                ERRORTOKEN,
+                TokenError,
+                UNSUPPORTED
             )
+            CHECK_BIT_RANGE(offset, "Too many control types");
+            #undef offset
             #undef __ENUM_NAME
 
             /*
@@ -364,9 +407,9 @@ namespace turtle
                    │└─────> Format Type
                    └──────> Is unicode string
              */
-            #define DataShiftToMargin(N) ( (N) << (tokenTypeOffset - 12) )
             #define __ENUM_NAME Data
-            BETTER_ENUM(__ENUM_NAME,  turtle_flag,
+            #define DataShiftToMargin(N) ( (N) << (tokenTypeOffset - token::__ENUM_NAME::NUMBER_OF_ENUMS) )
+            TURTLE_CLASS(__ENUM_NAME,
                 DATA_TYPE_STRING =     DataShiftToMargin(M_turtle_flag(token::__ENUM_NAME::DATA_TYPE_STRING))        | flag::Type::DATA,
                 DATA_TYPE_RAW =        DataShiftToMargin(M_turtle_flag(token::__ENUM_NAME::DATA_TYPE_RAW))           | flag::Type::DATA,
                 DATA_TYPE_FORMATTED =  DataShiftToMargin(M_turtle_flag(token::__ENUM_NAME::DATA_TYPE_FORMATTED))     | flag::Type::DATA,
@@ -414,7 +457,7 @@ namespace turtle
             #define __ENUM_NAME Operator
             //offset the arithmetic tokens to be next to the DELIMITER_ASSIGN token
             #define DeliminarAssignOffset_M(x) (x << (token::__ENUM_NAME::DELIMITER_ASSIGN + 1))
-            BETTER_ENUM(__ENUM_NAME, turtle_flag,
+            TURTLE_CLASS(__ENUM_NAME,
                 DELIMITER_ASSIGN =                 M_turtle_flag(token::__ENUM_NAME::DELIMITER_ASSIGN) | flag::Type::DELIMITERS,
 
                 ARITHMETIC_ADD_ASSIGN =             DeliminarAssignOffset_M(token::Arithmetic::ARITHMETIC_ADD)             | flag::__ENUM_NAME::DELIMITER_ASSIGN,
@@ -431,11 +474,14 @@ namespace turtle
                 ARITHMETIC_BIT_RIGHT_SHIFT_ASSIGN = DeliminarAssignOffset_M(token::Arithmetic::ARITHMETIC_BIT_RIGHT_SHIFT) | flag::__ENUM_NAME::DELIMITER_ASSIGN,
 
                 DELIMITER_AT_SIGN =                 M_turtle_flag(token::__ENUM_NAME::DELIMITER_AT_SIGN)                    | flag::Type::DELIMITERS,
+                //@=
+                ARITHMETIC_AT_ASSIGN =              flag::__ENUM_NAME::DELIMITER_AT_SIGN                                    | flag::__ENUM_NAME::DELIMITER_ASSIGN,
+                DELIMINAR_RARROW =                  M_turtle_flag(token::__ENUM_NAME::DELIMINAR_RARROW)                     | flag::Type::DELIMITERS,
                 DELIMITER_COLON =                   M_turtle_flag(token::__ENUM_NAME::DELIMITER_COLON)                      | flag::Type::DELIMITERS,
                 DELIMITER_SEMICOLON =               M_turtle_flag(token::__ENUM_NAME::DELIMITER_SEMICOLON)                  | flag::Type::DELIMITERS,
                 DELIMITER_COMMA =                   M_turtle_flag(token::__ENUM_NAME::DELIMITER_COMMA)                      | flag::Type::DELIMITERS,
                 DELIMITER_PERIOD =                  M_turtle_flag(token::__ENUM_NAME::DELIMITER_PERIOD)                     | flag::Type::DELIMITERS,
-                DELIMITER_ELLIPSIS =                M_turtle_flag(token::__ENUM_NAME::DELIMITER_ELLIPSIS)                     | flag::Type::DELIMITERS,
+                DELIMITER_ELLIPSIS =                M_turtle_flag(token::__ENUM_NAME::DELIMITER_ELLIPSIS)                   | flag::Type::DELIMITERS,
                 DELIMITER_ACCESS =                                                                               DELIMITER_PERIOD,
 
                 DELIMITER_BRACE =                   M_turtle_flag(token::__ENUM_NAME::DELIMITER_BRACE)                      | flag::Type::DELIMITERS,
@@ -452,11 +498,12 @@ namespace turtle
                 DELIMITER_CURLY_RIGHT_BRACE =       (DELIMITER_CURLY_BRACE                         | DELIMITER_BRACE),
                 DELIMITER_CURLY_LEFT_BRACE =        (DELIMITER_CURLY_BRACE  | DELIMITER_LEFT_BRACE | DELIMITER_BRACE)
             )
+
         #undef DeliminarAssignOffset_M
         #undef __ENUM_NAME
 
         #define __ENUM_NAME Keyword
-            BETTER_ENUM(__ENUM_NAME, turtle_flag,
+            TURTLE_CLASS(__ENUM_NAME,
                 KEYWORD_FALSE =      token::__ENUM_NAME::KEYWORD_FALSE    | flag::Type::KEYWORD,
                 KEYWORD_CLASS =      token::__ENUM_NAME::KEYWORD_CLASS    | flag::Type::KEYWORD,
                 KEYWORD_FINALLY =    token::__ENUM_NAME::KEYWORD_FINALLY  | flag::Type::KEYWORD,
@@ -513,7 +560,7 @@ namespace turtle
              * 01000000 00000000 00000000 00000000
              */
         #define __ENUM_NAME Arithmetic
-            BETTER_ENUM(__ENUM_NAME, turtle_flag,
+            TURTLE_CLASS(__ENUM_NAME,
                 ARITHMETIC_OPERATION =             M_turtle_flag(token::__ENUM_NAME::ARITHMETIC_OPERATION)       | flag::Type::ARITHMETIC,
 
                 ARITHMETIC_ADD =                   M_turtle_flag(token::__ENUM_NAME::ARITHMETIC_ADD)             | flag::__ENUM_NAME::ARITHMETIC_OPERATION,
@@ -581,6 +628,10 @@ namespace turtle
             {sti("..."),      token::flag::Operator::   DELIMITER_ELLIPSIS},
             {sti("."),        token::flag::Operator::   DELIMITER_PERIOD},
             {sti("="),        token::flag::Operator::   DELIMITER_ASSIGN},
+            {sti("->"),       token::flag::Operator::   DELIMINAR_RARROW},
+            {sti(":="),       token::flag::Control::    UNSUPPORTED}, //NOTE -- walrus
+            {sti("@"),        token::flag::Operator::   DELIMITER_AT_SIGN},
+            {sti("@="),       token::flag::Operator::   ARITHMETIC_AT_ASSIGN},
             {sti("+"),        token::flag::Arithmetic:: ARITHMETIC_ADD},
             {sti("-"),        token::flag::Arithmetic:: ARITHMETIC_SUB},
             {sti("*"),        token::flag::Arithmetic:: ARITHMETIC_MULL},
@@ -616,7 +667,8 @@ namespace turtle
 
             {sti("<<="),      token::flag::Operator::   ARITHMETIC_BIT_LEFT_SHIFT_ASSIGN},
             {sti(">>="),      token::flag::Operator::   ARITHMETIC_BIT_RIGHT_SHIFT_ASSIGN},
-
+            {sti("async"),    token::flag::Control::    UNSUPPORTED},
+            {sti("await"),    token::flag::Control::    UNSUPPORTED},
             {sti("False"),    token::flag::Keyword::    KEYWORD_FALSE},
             {sti("True"),     token::flag::Keyword::    KEYWORD_TRUE},
             {sti("class"),    token::flag::Keyword::    KEYWORD_CLASS},
@@ -657,7 +709,7 @@ namespace turtle
         if (strlen(str) <= 8)
         {
             const uint_fast64_t hash = sti(str);
-            for (uint_fast8_t i = 0; *turtleBuiltinTokenMap[i]; ++i)
+            for (uint_fast8_t i = 0; i < lengthof(turtleBuiltinTokenMap); ++i)
             {
                 if (hash == turtleBuiltinTokenMap[i][0])
                 {

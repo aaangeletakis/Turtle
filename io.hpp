@@ -3,31 +3,37 @@
 
 #include "global.h"
 #include <fstream>
-#include <streambuf>
-#include <sstream>
-#include <codecvt>
+#include <string.h>
+#include <exception>
 
-void readfile(const char *filename, char * buffer)
+void readfile(const char *filename, std::string &file)
 {
+    class file_exception: public std::exception
+    {
+      virtual const char* what() const throw()
+      {
+        return strerror(errno);
+      }
+    } fileex;
+
     FILE *fh = fopen(filename, "rb");
     if ( fh == NULL )
     {
+        //error: No such file or directory
+
         //am i a joke to you?
         //I should have read in between the lines ...
-        panic("Cannot open file\n");
+        throw fileex;
     }
     fseek(fh, 0L, SEEK_END);
-    const size_t length = ftell(fh);
+    const size_t& length = ftell(fh);
     /*it's*/ rewind(fh); //timeeee
-    //avoid warning -- put in if statment
-    if(fread(buffer, length, sizeof(char), fh)){};
-    if(ferror(fh))
+
+    file.resize(length, 0);
+    fread(file.data(), length, sizeof(char), fh);
+    if(ferror(fh) || feof(fh))
     {
-        panic("Error reading file\n");
-    }
-    if(feof(fh))
-    {
-        panic("End of file reached while reading\n");
+        throw fileex;
     }
     fclose(fh); fh = NULL;
 }

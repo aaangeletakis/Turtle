@@ -24,8 +24,10 @@
 
 //if C
 #ifndef __cplusplus
-#define constexpr const
+#define constexpr
 #endif
+
+#define lengthof(arr) (sizeof(arr)/sizeof(arr[0]))
 
 void panic(const char *fmt, ...){
     fprintf(stderr, "error: ");

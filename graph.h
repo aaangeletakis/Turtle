@@ -7,7 +7,7 @@
 void check_braces(turtle::Document &Doc);
 
 void construct_graph(turtle::Document &Doc){
-    //check for any missing braces
+    /*//check for any missing braces
     //if there are throw an error
     check_braces(Doc);
     const uint64_t maxlines     = Doc.Nodes.back().line + 1;
@@ -50,7 +50,7 @@ void construct_graph(turtle::Document &Doc){
             std::cout << '[' << turtle::getFlagName(n->NodeFlags) << ']';
         }
        std::cout << ")\n";
-    }
+    }*/
 }
 
 void check_braces(turtle::Document &Doc){
@@ -73,5 +73,21 @@ void check_braces(turtle::Document &Doc){
         );
     }
 }
+
+/* returns XORed value of the node addresses */
+//I am not using a template in this case as then I'd have to
+//do ptr_xor<type>(p1,p2) every time I'd declare this
+//But In order to prevent code rewriting just use a macro
+#define ValueType Node*
+ValueType ptr_xor (ValueType ecx, ValueType edx)
+{
+    return reinterpret_cast<ValueType>(
+      reinterpret_cast<uintptr_t>(ecx) ^ reinterpret_cast<uintptr_t>(edx)
+    );
+}
+#undef ValueType
+
+//haaaaaaa
+//#define true false
 
 #endif // GRAPH_H

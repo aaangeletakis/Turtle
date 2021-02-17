@@ -70,6 +70,8 @@ struct Document
     //Document Nodes
     std::vector<struct _Lexeme> Lexemes;
     std::vector<struct Node> Nodes;
+    std::vector<struct Node>    Heap;
+    std::vector<struct Node*> _graph;
     std::vector<struct Node> Graph;
     std::vector<std::any> data;
 };
@@ -78,39 +80,40 @@ auto tokenize(std::string &filedata, std::vector<_Lexeme> &Lexemes)
 {
 /*
 Paste into regex101.com
-Replace regex comments with R"()" by using \(\?#\s*\)
+Replace regex comments with )"\nR"( by using \(\?#\s*\)
 
-[rRfFUu]{0,2}?("{3}|")(?:[^\\"]|\\.|\\)*\1|(?#
-)([rRfFUu]{0,2}?('{3}|')(?:[^\\']|\\.|\\)*\3)|(?#
+[rRfFUu]{0,2}?("{3}|")((?:[^\\"]|\\.|\\)*\1)?|(?#
+)([rRfFUu]{0,2}?('{3}|')((?:[^\\']|\\.|\\)*\4)?)|(?#
 )(#[^\r\n]*)|(?#
 )([\n\r][ \t]*)|(?#
 )(\\[^\r\n]*)|(?#
 )((?#
     )(\.{3})|(?#
-    )([0-9][0-9_]*\.[0-9_]*[0-9][0-9_]*[a-zA-Z]*)(?#
-    )|([0-9][0-9_]*\.[a-zA-Z]*)|(?#
-    )(\.[0-9][0-9_]*[a-zA-Z]*)|(?#
+    )([0-9][0-9_]*\.[0-9_]*[0-9][0-9_]*[a-zA-Z]*[0-9_]*)(?#
+    )|([0-9][0-9_]*\.[a-zA-Z]*[0-9_]*)|(?#
+    )(\.[0-9][0-9_]*[a-zA-Z]*[0-9_]*)|(?#
     )([<>*\/]{2})=?|(?#
-    )([!%&*+\-<=>\/\\^|:]=)(?#
+    )([!%&*+\-<=>@\/\\^|:]=)(?#
 ))|(?#
 )([!-\/:-@\[-^{-~]|[^\s!-\/:-@\[-^{-~]+)
 */
     //when rEgEX is A LaNGUAgE
     static const std::regex TokenRegex(
-                 R"([rRfFUu]{0,2}?("{3}|")(?:[^\\"]|\\.|\\)*\1|)"      //capture " strings
-                R"(([rRfFUu]{0,2}?('{3}|')(?:[^\\']|\\.|\\)*\3)|)"     //capture ' strings
-                R"((#[^\r\n]*)|)"                                      //capture comments
-                R"(([\n\r][ \t]*)|)"                                   //capture newlines
-                R"((\\[^\r\n]*)|)"                                     /* capture '\'andAnythingAfterTheBackslash  */
+                 R"([rRfFUu]{0,2}?("{3}|")((?:[^\\"]|\\.|\\)*\1)?|)"    //capture " strings
+                R"(([rRfFUu]{0,2}?('{3}|')((?:[^\\']|\\.|\\)*\4)?)|)"   //capture ' strings
+                R"((#[^\r\n]*)|)"                                       //capture comments
+                R"(([\n\r][ \t]*)|)"                                    //capture newlines
+                R"((\\[^\r\n]*)|)"                                      /* capture \TheBackslashAndAnythingAfterIt  */
                 R"(()"
-                    R"((\.{3})|)"                                      //capture "..."
-                    R"(([0-9][0-9_]*\.[0-9_]*[0-9][0-9_]*[a-zA-Z]*)|)" //──┬┬─> fucking floating point numbers
-                    R"(([0-9][0-9_]*\.[a-zA-Z]*)|)"                    //──┘│
-                    R"((\.[0-9][0-9_]*[a-zA-Z]*)|)"                    //───┘
-                    R"(([<>*\/]{2})=?|)"                               //capture 2-3 character operators
-                    R"(([!%&*+\-<=>\/\\^|:]=))"                         //capture 2 caracter operators
+                    R"((\.{3})|)"                                                  //capture "..."
+                    R"((->)|)"                                                     //capture ->
+                    R"(([0-9][0-9_]*\.[0-9_]*[0-9][0-9_]*[a-zA-Z]*[0-9_]*)|)"       //──┬┬─> fucking floating point numbers
+                    R"(([0-9][0-9_]*\.[a-zA-Z]*[0-9_]*)|)"                          //──┘│
+                    R"((\.[0-9][0-9_]*[a-zA-Z]*[0-9_]*)|)"                          //───┘
+                    R"(([<>*\/]{2})=?|)"                                    //capture 2-3 character operators
+                    R"(([!%&*+\-<=>@\/\\^|:]=))"                            //capture 2 caracter operators
                 R"()|)"
-                R"(([!-\/:-@\[-^{-~]|[^\s!-\/:-@\[-^{-~]+))"           //capture anything else
+                R"(([!-\/:-@\[-^{-~]|[^\s!-\/:-@\[-^{-~]+))"            //capture anything else
     );
 
     std::sregex_iterator rend, rit(filedata.begin(), filedata.end(), TokenRegex);
@@ -242,7 +245,7 @@ void lex(turtle::Document &Document){
                     std::regex(R"(^0[xXoO]+[0-9A-Fa-f_]+$)"),
                     std::regex(R"(^0[bB]+[01_]+$)")
                 };
-                for(;type < sizeof(regex)/sizeof(regex[0]); ++type){
+                for(;type < lengthof(regex); ++type){
                     if(std::regex_match(Lstr, regex[type])){
                         goto _DATA_TYPE_NUMBER;
                     }
@@ -427,8 +430,8 @@ void lex(turtle::Document &Document){
         [[fallthrough]];                                                                                                                                       // │
         case '"':                                                                                                                                              // │
         case '\'':{                                                                                                                                            // │
-            if(Lstr.length() == 1){                                                                                                                            // │
-                panic("Line %d:%d Non terminating string %c\n", Lexeme.lnum + 1, Lexeme.lpos, Lstr[0]);                                                        // │
+            if(Lstr.length() == 1 || ((Lstr[1] == '\'' || Lstr[1] == '"') && Lstr.length() == 3)){                                                                                                                            // │
+                panic("Line %d:%d Non terminating string\n", Lexeme.lnum + 1, Lexeme.lpos);                                                                    // │
             }                                                                                                                                                  // │
             flag |= turtle::token::flag::Data::DATA_TYPE_STRING | Document.data.size();                                                                        // │
             Document.data.push_back((std::string_view)Lstr);                                                                                                   // │

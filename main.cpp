@@ -20,12 +20,8 @@ int main(int argc, char *argv[])
         puts("Ready, Set, Go!");
         //set explicit scope to deallocate file data and save memory
         {
-                // 2^22 = 4,194,304 bytes max
-                //       ~4 MB
-                constexpr   size_t fsize_max  = 1 << 22;
-                static char buffer[fsize_max] = {0};
-                readfile(filename, buffer);
-                std::string file(std::move(buffer));
+                std::string file;
+                readfile(filename, file);
 
                 DEBUG_M(puts("Tokenizing");)
                 turtle::tokenize(file, Document.Lexemes);
