@@ -11,6 +11,7 @@
 #include <array>
 #include <any>
 #include <algorithm>
+#include "ctre.hpp"
 
 namespace turtle {
 
@@ -80,38 +81,49 @@ auto tokenize(std::string &filedata, std::vector<_Lexeme> &Lexemes)
 {
 /*
 Paste into regex101.com
-Replace regex comments with )"\nR"( by using \(\?#\s*\)
+Replace regex comments with )"${2}R"( by using (\(\?#([^)]*)\))|^
 
-[rRfFUu]{0,2}?("{3}|")((?:[^\\"]|\\.|\\)*\1)?|(?#
-)([rRfFUu]{0,2}?('{3}|')((?:[^\\']|\\.|\\)*\4)?)|(?#
-)(#[^\r\n]*)|(?#
-)([\n\r][ \t]*)|(?#
-)(\\[^\r\n]*)|(?#
+[rRfFUu]{0,2}?("{3}|")((?:[^\\"]|\\.|\\)*\1)?|(?#      //capture ' strings
+)([rRfFUu]{0,2}?('{3}|')((?:[^\\']|\\.|\\)*\4)?)|(?#   //capture ' strings
+)(#[^\r\n]*)|(?#                                       //capture comments
+)([\n\r][ \t]*)|(?#                                    //capture newlines
+)(\\[^\r\n]*)|(?#                                      //capture \TheBackslashAndAnythingAfterIt
 )((?#
-    )(\.{3})|(?#
-    )([0-9][0-9_]*\.[0-9_]*[0-9][0-9_]*[a-zA-Z]*[0-9_]*)(?#
-    )|([0-9][0-9_]*\.[a-zA-Z]*[0-9_]*)|(?#
-    )(\.[0-9][0-9_]*[a-zA-Z]*[0-9_]*)|(?#
-    )([<>*\/]{2})=?|(?#
-    )([!%&*+\-<=>@\/\\^|:]=)(?#
+    )(\.{3})|(?#                                       //capture ...
+    )(->)|(?#                                          //capture ->
+                                                       //fucking floating point numbers
+    )(\d[\d_]*\.[\d_]*\d[\d_]*[eE]-?[\d_]*)|(?#        //capture exponential floating point literals
+    )(\d[\d_]*\.[\d_]*\d[\d_]*[\w]*)|(?#               //capture floating point literals
+    )(\d[\d_]*\.[eE]-?[\d_]*)|(?#                      //capture exponential floating point literals
+    )(\d[\d_]*\.\w*)|(?#                               //capture floating point literals
+    )(\.\d[\d_]*[eE]-?[\d_]*)|(?#                      //capture exponential floating point literals
+    )(\.\d[\d_]*\w*)|(?#                               //capture floating point literals
+    )(\d[\d_]*[eE]-?[\d_]*)|(?#                        //capture exponential literals
+    )([<>*\/]{2})=?|(?#                                //capture 2-3 character operators
+    )([!%&*+\-<=>@\/\\^|:]=)(?#                        //capture 2 caracter operators
 ))|(?#
-)([!-\/:-@\[-^{-~]|[^\s!-\/:-@\[-^{-~]+)
+)([!-\/:-@\[-^{-~]|[^\s!-\/:-@\[-^{-~]+)(?#            //capture anything else)
 */
     //when rEgEX is A LaNGUAgE
     static const std::regex TokenRegex(
-                 R"([rRfFUu]{0,2}?("{3}|")((?:[^\\"]|\\.|\\)*\1)?|)"    //capture " strings
+                R"([rRfFUu]{0,2}?("{3}|")((?:[^\\"]|\\.|\\)*\1)?|)"     //capture ' strings
                 R"(([rRfFUu]{0,2}?('{3}|')((?:[^\\']|\\.|\\)*\4)?)|)"   //capture ' strings
                 R"((#[^\r\n]*)|)"                                       //capture comments
                 R"(([\n\r][ \t]*)|)"                                    //capture newlines
-                R"((\\[^\r\n]*)|)"                                      /* capture \TheBackslashAndAnythingAfterIt  */
+                R"((\\[^\r\n]*)|)"                                      //capture \TheBackslashAndAnythingAfterIt
                 R"(()"
-                    R"((\.{3})|)"                                                  //capture "..."
-                    R"((->)|)"                                                     //capture ->
-                    R"(([0-9][0-9_]*\.[0-9_]*[0-9][0-9_]*[a-zA-Z]*[0-9_]*)|)"       //──┬┬─> fucking floating point numbers
-                    R"(([0-9][0-9_]*\.[a-zA-Z]*[0-9_]*)|)"                          //──┘│
-                    R"((\.[0-9][0-9_]*[a-zA-Z]*[0-9_]*)|)"                          //───┘
-                    R"(([<>*\/]{2})=?|)"                                    //capture 2-3 character operators
-                    R"(([!%&*+\-<=>@\/\\^|:]=))"                            //capture 2 caracter operators
+                    R"((\.{3})|)"                                       //capture ...
+                    R"((->)|)"                                          //capture ->
+                                                                        //fucking floating point numbers
+                    R"((\d[\d_]*\.[\d_]*\d[\d_]*[eE]-?[\d_]*)|)"            //capture exponential floating point literals
+                    R"((\d[\d_]*\.[\d_]*\d[\d_]*[\w]*)|)"                   //capture floating point literals
+                    R"((\d[\d_]*\.[eE]-?[\d_]*)|)"                          //capture exponential floating point literals
+                    R"((\d[\d_]*\.\w*)|)"                                   //capture floating point literals
+                    R"((\.\d[\d_]*[eE]-?[\d_]*)|)"                          //capture exponential floating point literals
+                    R"((\.\d[\d_]*\w*)|)"                                   //capture floating point literals
+                    R"((\d[\d_]*[eE]-?[\d_]*)|)"                        //capture exponential literals
+                    R"(([<>*\/]{2})=?|)"                                //capture 2-3 character operators
+                    R"(([!%&*+\-<=>@\/\\^|:]=))"                        //capture 2 caracter operators
                 R"()|)"
                 R"(([!-\/:-@\[-^{-~]|[^\s!-\/:-@\[-^{-~]+))"            //capture anything else
     );
@@ -153,7 +165,7 @@ std::string getFlagName(turtle_flag flag)
         return flagstr(token::flag::Keyword::_values(), flag);
         break;
     case token::Type::DATA:
-        return turtle::flagstr(token::flag::Data::_values(), ((flag >> 16) << 16));
+        return turtle::flagstr(token::flag::Data::_values(), flag);
         break;
     case token::Type::IDENTIFIER:
         return "IDENTIFIER";
@@ -218,7 +230,8 @@ void lex(turtle::Document &Document){
                     }
                 }
             }
-            flag |= turtle::token::flag::Control::NEWLINE | (len-1);
+            flag |= turtle::token::flag::Control::NEWLINE;
+            tmpNode.header |= (len-1);
             }break;
         case '.':{
             if(Lstr.back() == '.'){
@@ -227,7 +240,7 @@ void lex(turtle::Document &Document){
         }
         //fucking numbers
         case '0' ... '9':{
-            uint_fast8_t type = 0;
+
             enum {
                 RATIONAL_NUM,
                 EXPONENTIAL,
@@ -235,14 +248,17 @@ void lex(turtle::Document &Document){
                 HEX_OR_OCTAL, //cuz they both have the same alphabet
                 BINARY
             };
+            uint_fast8_t type = 0;
             switch(Lstr.size()){
                 default:{
                 //parsing the numbers is too complex
                 static const std::regex regex [] = {
+                    std::regex(R"(^[0-9_]+$)"),
                     std::regex(R"(^[0-9._]+$)"),
-                    std::regex(R"(^[0-9._]+[eE]+[0-9_]+$)"),
+                    std::regex(R"(^[0-9_]+[eE]+-?[0-9_]+$)"),
                     std::regex(R"(^[0-9._]+[jJ]+$)"),
-                    std::regex(R"(^0[xXoO]+[0-9A-Fa-f_]+$)"),
+                    std::regex(R"(^0[xX]+[0-9A-Fa-f_]+$)"),
+                    std::regex(R"(^0[oO]+[0-9A-Fa-f_]+$)"),
                     std::regex(R"(^0[bB]+[01_]+$)")
                 };
                 for(;type < lengthof(regex); ++type){
@@ -250,76 +266,23 @@ void lex(turtle::Document &Document){
                         goto _DATA_TYPE_NUMBER;
                     }
                 }
-                panic("Invalid number literal\n");
+                panic("Invalid number literal %s\n", Lstr.c_str());
                 }break;
                 case 1:break;
             }
-
             _DATA_TYPE_NUMBER:
-            auto remove_underscores = [](const std::string & str){
-                return std::regex_replace(str, std::regex("_"), "");
+            turtle::turtle_flag fmap[] = {
+                turtle::token::flag::Data::DATA_TYPE_INT,
+                turtle::token::flag::Data::DATA_TYPE_FLOAT,
+                turtle::token::flag::Data::DATA_TYPE_COMPLEX,
+                turtle::token::flag::Data::DATA_TYPE_EXPONENTIAL,
+                turtle::token::flag::Data::DATA_TYPE_HEX,
+                turtle::token::flag::Data::DATA_TYPE_OCTAL,
+                turtle::token::flag::Data::DATA_TYPE_BINARY
             };
-            std::string num_str(remove_underscores(Lstr));
-            switch(type){
-            case EXPONENTIAL:
-                panic("Exponetial numbers not supported cuz im not a nerd\n");
-                break;
-            case COMPLEX:
-                panic("Compex numbers not supported cuz I don't know what they are\n");
-                break;
-            case BINARY:
-                //panic("Binary numbers not supported\n");
-            {
-
-                auto bin_str = std::regex_replace(num_str, std::regex(R"(^0+[bB0]+)"), "");
-                //prevent internal overflow by getting the sizeof( the return type of (std::stoull) ) * 8
-                if(bin_str.size() > sizeof ( unsigned long long ) * 8 ){
-                    //if the highest set bit index is greater than 64 bits throw an error
-                    panic("Binary literal greater than 64 bits\n");
-
-                }
-                //eFfiCIENCY
-                //convert base 2 number to a base 10 int and then convert back to a string
-                num_str = std::to_string(
-                            std::stoull(
-                                bin_str,
-                            0, 2)
-                          );
-            }
-                break;
-            case HEX_OR_OCTAL:
-                if(std::regex_match(Lstr, std::regex(R"(^0+[oO].*)"))){
-                    std::string octal_str(std::regex_replace(num_str, std::regex(R"(^0+[oO]+)"), ""));
-                    try {
-                        num_str = std::to_string(
-                                    std::stoull(
-                                        octal_str,
-                                    0, 8)
-                                  );
-                    } catch (...){
-                        panic("Invalid octal literal\n");
-                    }
-                } else {
-                    num_str = std::regex_replace(num_str, std::regex(R"(^0+[xX]+)"), "0x");
-                }break;
-            case RATIONAL_NUM:
-                //python outputs an error if your number is non zero but starts with zero
-                if(std::regex_match(num_str, std::regex(R"(^[0_]+[._1-9]+$)"))){
-                    panic("leading zeros in decimal integer literals are not permitted; "
-                          "use an 0o prefix for octal integers\n");
-                }
-            }
-
-            if(std::regex_match(num_str, std::regex(R"(\.)"))){
-                panic("Floating point numbers not supported yet\n");
-            }
-
-            flag |= turtle::token::flag::Data::DATA_TYPE_NUMBER | Document.data.size();
-            Document.data.push_back(
-                        std::pair<std::string_view, turtle_int>(
-                            {(std::string_view)Lstr, turtle_int(num_str)}
-                        )
-            );
+            flag |= fmap[type];
+            tmpNode.header |=  Document.data.size();
+            Document.data.push_back("as");
         }break;
         //fucking strings
         case 'r':
@@ -430,10 +393,12 @@ void lex(turtle::Document &Document){
         [[fallthrough]];                                                                                                                                       // │
         case '"':                                                                                                                                              // │
         case '\'':{                                                                                                                                            // │
-            if(Lstr.length() == 1 || ((Lstr[1] == '\'' || Lstr[1] == '"') && Lstr.length() == 3)){                                                                                                                            // │
+            if( Lstr.length() == 1 ||
+               (Lstr.length() == 3 && (Lstr[1] == '\'' || Lstr[1] == '"'))){                                                                                                                            // │
                 panic("Line %d:%d Non terminating string\n", Lexeme.lnum + 1, Lexeme.lpos);                                                                    // │
             }                                                                                                                                                  // │
-            flag |= turtle::token::flag::Data::DATA_TYPE_STRING | Document.data.size();                                                                        // │
+            flag |= turtle::token::flag::Data::DATA_TYPE_STRING;                                                                                               // │
+            tmpNode.header |= Document.data.size();
             Document.data.push_back((std::string_view)Lstr);                                                                                                   // │
             }break;                                                                                                                                            // │
         default:                                                                                                                                               // │
@@ -442,7 +407,8 @@ void lex(turtle::Document &Document){
             if( (flag |= turtle::findToken(Lstr.c_str())) ){
                 break;
             }
-            flag |= turtle::token::flag::Type::IDENTIFIER | Document.data.size();
+            flag |= turtle::token::flag::Type::IDENTIFIER;
+            tmpNode.header |= Document.data.size();
             Document.data.push_back(Lstr);
             break;
         }
@@ -461,7 +427,7 @@ void lex(turtle::Document &Document){
         snake_y << std::bitset< sizeof(turtle_flag) * 8 >(tmpNode.NodeFlags);
         const std::string& flag_str = getFlagName(tmpNode.NodeFlags);
 
-        //                                                                                                      ~~ 33 spaces ~~
+        //                                                                                                       ~~ 33 spaces ~~
         snake_y << " | Predicted token -> " << flag_str << (flag_str.size() + static_cast<const char *>("                                 "))
                 << " | token -> [";
 
@@ -484,7 +450,7 @@ void lex(turtle::Document &Document){
         std::cout << snake_y.str() << "]\n";
 
 #endif // ifdef DEBUG
-
+        tmpNode.string = std::move(Lstr);
         tmpNode.line = std::move(Lexeme.lnum);
         tmpNode.linepos = std::move(Lexeme.lpos);
         Document.Nodes.push_back(tmpNode);

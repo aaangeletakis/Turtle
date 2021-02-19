@@ -1,2 +1,1 @@
-def a() -> int:
-    return 0
+sasdas"asdasd"

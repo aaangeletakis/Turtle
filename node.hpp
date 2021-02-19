@@ -47,22 +47,29 @@
 #include "global.h"
 #include <cmath>
 
-#include <boost/multiprecision/cpp_int.hpp>
-#include <boost/multiprecision/cpp_dec_float.hpp>
+//#include <boost/multiprecision/cpp_int.hpp>
+//#include <boost/multiprecision/cpp_dec_float.hpp>
 #include <any>
 
 namespace turtle {
     //In case I want to change it to something bigger in the future
     typedef uint_fast32_t turtle_flag;
 
-    typedef boost::multiprecision::cpp_int          turtle_int;
-    typedef boost::multiprecision::cpp_dec_float_50 turtle_float;
+    typedef long                                    turtle_int;
+    typedef turtle_int                              turtle_float;
     typedef std::any                                turtle_any;
     using   std::any_cast;
 
     typedef turtle_int                              t_int;
     typedef turtle_float                            t_float;
     typedef turtle_any                              t_any;
+    /*struct turtle_num {
+        turtle_int sig_digits = 0;
+        turtle_int num        = 0;
+        constexpr turtle_num(const std::string_view& _n){
+            num = static_cast<turtle_int>(_n);
+        }
+    };*/
 }
 
 //      M_turtle_flag(N) (00000000 00000000 00000000 00000001 <<  N )
@@ -136,8 +143,10 @@ struct Node
 {
     //Node
     turtle::turtle_flag NodeFlags = 0;
-    Node * npx = 0;                    //node pointer xor-ed
-    Node * child = 0;
+    Node *              npx       = 0; //node pointer xor-ed
+    Node *              child     = 0;
+    uint_fast16_t       header    = 0;
+    std::string         string;
 
     uint_fast16_t linepos = 0;
     uint_fast16_t line = 0;
@@ -180,15 +189,12 @@ namespace turtle
         return "";
     }
 #endif
-
     //extract bits then check flag integrety
     inline constexpr bool hasFlag(turtle_flag src, turtle_flag __f){
         return ((src & __f) == __f);
     }
     namespace token
     {
-
-
 
         #define __ENUM_NAME Control
         TURTLE_CLASS(__ENUM_NAME,
@@ -219,6 +225,7 @@ namespace turtle
                     DATA_TYPE_EXPONENTIAL,
                     DATA_TYPE_HEX,
                     DATA_TYPE_OCTAL,
+                    DATA_TYPE_BINARY,
             DATA_TYPE_, //unknown -- make effort to determine type
             DATA_TYPE_COMMENT
         )
@@ -367,17 +374,14 @@ namespace turtle
              */
 
             #define __ENUM_NAME Control
-            #define offset (tokenTypeOffset - token::__ENUM_NAME::NUMBER_OF_ENUMS)
-            #define control_type_macro(N) ( (N) << offset )
             TURTLE_CLASS(__ENUM_NAME,
                 NULL_TOKEN = 0 | flag::Type::CONTROL,
-                NEWLINE =    control_type_macro(M_turtle_flag(token::__ENUM_NAME::NEWLINE) | M_turtle_flag(token::__ENUM_NAME::HAS_VALUE) | flag::Type::CONTROL),
-                ENDMARKER =  control_type_macro(M_turtle_flag(token::__ENUM_NAME::ENDMARKER) | M_turtle_flag(token::__ENUM_NAME::HAS_VALUE) | flag::Type::CONTROL),
+                NEWLINE =    M_turtle_flag(token::__ENUM_NAME::NEWLINE) | M_turtle_flag(token::__ENUM_NAME::HAS_VALUE) | flag::Type::CONTROL,
+                ENDMARKER =  M_turtle_flag(token::__ENUM_NAME::ENDMARKER) | M_turtle_flag(token::__ENUM_NAME::HAS_VALUE) | flag::Type::CONTROL,
                 ERRORTOKEN,
                 TokenError,
                 UNSUPPORTED
             )
-            CHECK_BIT_RANGE(offset, "Too many control types");
             #undef offset
             #undef __ENUM_NAME
 
@@ -408,13 +412,12 @@ namespace turtle
                    └──────> Is unicode string
              */
             #define __ENUM_NAME Data
-            #define DataShiftToMargin(N) ( (N) << (tokenTypeOffset - token::__ENUM_NAME::NUMBER_OF_ENUMS) )
             TURTLE_CLASS(__ENUM_NAME,
-                DATA_TYPE_STRING =     DataShiftToMargin(M_turtle_flag(token::__ENUM_NAME::DATA_TYPE_STRING))        | flag::Type::DATA,
-                DATA_TYPE_RAW =        DataShiftToMargin(M_turtle_flag(token::__ENUM_NAME::DATA_TYPE_RAW))           | flag::Type::DATA,
-                DATA_TYPE_FORMATTED =  DataShiftToMargin(M_turtle_flag(token::__ENUM_NAME::DATA_TYPE_FORMATTED))     | flag::Type::DATA,
-                PRINTF_STYLE_FORMAT =  DataShiftToMargin(M_turtle_flag(token::__ENUM_NAME::DATA_TYPE_FORMAT_TYPE))   | flag::Type::DATA,
-                DATA_TYPE_UNICODE =    DataShiftToMargin(M_turtle_flag(token::__ENUM_NAME::DATA_TYPE_UNICODE))       | flag::Type::DATA,
+                DATA_TYPE_STRING    =  M_turtle_flag(token::__ENUM_NAME::DATA_TYPE_STRING)        | flag::Type::DATA,
+                DATA_TYPE_RAW       =  M_turtle_flag(token::__ENUM_NAME::DATA_TYPE_RAW)           | flag::Type::DATA,
+                DATA_TYPE_FORMATTED =  M_turtle_flag(token::__ENUM_NAME::DATA_TYPE_FORMATTED)     | flag::Type::DATA,
+                PRINTF_STYLE_FORMAT =  M_turtle_flag(token::__ENUM_NAME::DATA_TYPE_FORMAT_TYPE)   | flag::Type::DATA,
+                DATA_TYPE_UNICODE   =  M_turtle_flag(token::__ENUM_NAME::DATA_TYPE_UNICODE)       | flag::Type::DATA,
 
                 DATA_TYPE_RAW_STRING =             (flag::__ENUM_NAME::DATA_TYPE_RAW             | flag::__ENUM_NAME::DATA_TYPE_STRING),
                 DATA_TYPE_FORMATED_STRING =        (flag::__ENUM_NAME::DATA_TYPE_FORMATTED       | flag::__ENUM_NAME::DATA_TYPE_STRING),
@@ -423,8 +426,15 @@ namespace turtle
                 DATA_TYPE_UNICODE_STRING =         (flag::__ENUM_NAME::DATA_TYPE_UNICODE         | flag::__ENUM_NAME::DATA_TYPE_STRING),
                 DATA_TYPE_FORMATED_UNICODE_STRING = (flag::__ENUM_NAME::DATA_TYPE_FORMATED_STRING | flag::__ENUM_NAME::DATA_TYPE_UNICODE_STRING),
 
-                DATA_TYPE_COMMENT =    DataShiftToMargin(M_turtle_flag(token::__ENUM_NAME::DATA_TYPE_COMMENT))       | flag::Type::DATA,
-                DATA_TYPE_NUMBER =     DataShiftToMargin(M_turtle_flag(token::__ENUM_NAME::DATA_TYPE_NUMBER))        | flag::Type::DATA
+                DATA_TYPE_COMMENT =     M_turtle_flag(token::__ENUM_NAME::DATA_TYPE_COMMENT)       | flag::Type::DATA,
+                DATA_TYPE_NUMBER  =     M_turtle_flag(token::__ENUM_NAME::DATA_TYPE_NUMBER)        | flag::Type::DATA,
+                DATA_TYPE_INT     =     M_turtle_flag(token::__ENUM_NAME::DATA_TYPE_INT)           | flag::__ENUM_NAME::DATA_TYPE_NUMBER,
+                DATA_TYPE_FLOAT   =     M_turtle_flag(token::__ENUM_NAME::DATA_TYPE_INT)           | flag::__ENUM_NAME::DATA_TYPE_NUMBER,
+                DATA_TYPE_COMPLEX =     M_turtle_flag(token::__ENUM_NAME::DATA_TYPE_INT)           | flag::__ENUM_NAME::DATA_TYPE_NUMBER,
+                DATA_TYPE_EXPONENTIAL = M_turtle_flag(token::__ENUM_NAME::DATA_TYPE_EXPONENTIAL)   | flag::__ENUM_NAME::DATA_TYPE_NUMBER,
+                DATA_TYPE_HEX =         M_turtle_flag(token::__ENUM_NAME::DATA_TYPE_HEX)           | flag::__ENUM_NAME::DATA_TYPE_INT,
+                DATA_TYPE_OCTAL =       M_turtle_flag(token::__ENUM_NAME::DATA_TYPE_OCTAL)         | flag::__ENUM_NAME::DATA_TYPE_INT,
+                DATA_TYPE_BINARY =      M_turtle_flag(token::__ENUM_NAME::DATA_TYPE_BINARY)         | flag::__ENUM_NAME::DATA_TYPE_INT
             )
             #undef __ENUM_NAME
             #undef DataShiftToMargin
