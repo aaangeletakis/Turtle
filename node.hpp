@@ -41,9 +41,9 @@
  * 
  */
 
-//#include <string>
-#include <stdint.h>
 #include <string.h>
+#include <string>
+#include <stdint.h>
 #include "global.h"
 #include <cmath>
 
@@ -146,7 +146,7 @@ struct Node
     Node *              npx       = 0; //node pointer xor-ed
     Node *              child     = 0;
     uint_fast16_t       header    = 0;
-    std::string         string;
+    std::string        string;
 
     uint_fast16_t linepos = 0;
     uint_fast16_t line = 0;
@@ -413,28 +413,28 @@ namespace turtle
              */
             #define __ENUM_NAME Data
             TURTLE_CLASS(__ENUM_NAME,
-                DATA_TYPE_STRING    =  M_turtle_flag(token::__ENUM_NAME::DATA_TYPE_STRING)        | flag::Type::DATA,
-                DATA_TYPE_RAW       =  M_turtle_flag(token::__ENUM_NAME::DATA_TYPE_RAW)           | flag::Type::DATA,
-                DATA_TYPE_FORMATTED =  M_turtle_flag(token::__ENUM_NAME::DATA_TYPE_FORMATTED)     | flag::Type::DATA,
-                PRINTF_STYLE_FORMAT =  M_turtle_flag(token::__ENUM_NAME::DATA_TYPE_FORMAT_TYPE)   | flag::Type::DATA,
-                DATA_TYPE_UNICODE   =  M_turtle_flag(token::__ENUM_NAME::DATA_TYPE_UNICODE)       | flag::Type::DATA,
+                DATA_TYPE_STRING    =  M_turtle_flag(token::__ENUM_NAME::DATA_TYPE_STRING)         | flag::Type::DATA,
+                DATA_TYPE_RAW       =  M_turtle_flag(token::__ENUM_NAME::DATA_TYPE_RAW)            | flag::Type::DATA,
+                DATA_TYPE_FORMATTED =  M_turtle_flag(token::__ENUM_NAME::DATA_TYPE_FORMATTED)      | flag::Type::DATA,
+                PRINTF_STYLE_FORMAT =  M_turtle_flag(token::__ENUM_NAME::DATA_TYPE_FORMAT_TYPE)    | flag::Type::DATA,
+                DATA_TYPE_UNICODE   =  M_turtle_flag(token::__ENUM_NAME::DATA_TYPE_UNICODE)        | flag::Type::DATA,
 
-                DATA_TYPE_RAW_STRING =             (flag::__ENUM_NAME::DATA_TYPE_RAW             | flag::__ENUM_NAME::DATA_TYPE_STRING),
-                DATA_TYPE_FORMATED_STRING =        (flag::__ENUM_NAME::DATA_TYPE_FORMATTED       | flag::__ENUM_NAME::DATA_TYPE_STRING),
-                DATA_TYPE_FORMATED_PRINTF_STRING = (flag::__ENUM_NAME::PRINTF_STYLE_FORMAT       | flag::__ENUM_NAME::DATA_TYPE_FORMATED_STRING),
+                DATA_TYPE_RAW_STRING =             (flag::__ENUM_NAME::DATA_TYPE_RAW               | flag::__ENUM_NAME::DATA_TYPE_STRING),
+                DATA_TYPE_FORMATED_STRING =        (flag::__ENUM_NAME::DATA_TYPE_FORMATTED         | flag::__ENUM_NAME::DATA_TYPE_STRING),
+                DATA_TYPE_FORMATED_PRINTF_STRING = (flag::__ENUM_NAME::PRINTF_STYLE_FORMAT         | flag::__ENUM_NAME::DATA_TYPE_FORMATED_STRING),
                 DATA_TYPE_FORMATED_PYTHON_STRING = DATA_TYPE_FORMATED_STRING,
-                DATA_TYPE_UNICODE_STRING =         (flag::__ENUM_NAME::DATA_TYPE_UNICODE         | flag::__ENUM_NAME::DATA_TYPE_STRING),
-                DATA_TYPE_FORMATED_UNICODE_STRING = (flag::__ENUM_NAME::DATA_TYPE_FORMATED_STRING | flag::__ENUM_NAME::DATA_TYPE_UNICODE_STRING),
+                DATA_TYPE_UNICODE_STRING =         (flag::__ENUM_NAME::DATA_TYPE_UNICODE           | flag::__ENUM_NAME::DATA_TYPE_STRING),
+                DATA_TYPE_FORMATED_UNICODE_STRING = (flag::__ENUM_NAME::DATA_TYPE_FORMATED_STRING  | flag::__ENUM_NAME::DATA_TYPE_UNICODE_STRING),
 
                 DATA_TYPE_COMMENT =     M_turtle_flag(token::__ENUM_NAME::DATA_TYPE_COMMENT)       | flag::Type::DATA,
                 DATA_TYPE_NUMBER  =     M_turtle_flag(token::__ENUM_NAME::DATA_TYPE_NUMBER)        | flag::Type::DATA,
                 DATA_TYPE_INT     =     M_turtle_flag(token::__ENUM_NAME::DATA_TYPE_INT)           | flag::__ENUM_NAME::DATA_TYPE_NUMBER,
-                DATA_TYPE_FLOAT   =     M_turtle_flag(token::__ENUM_NAME::DATA_TYPE_INT)           | flag::__ENUM_NAME::DATA_TYPE_NUMBER,
-                DATA_TYPE_COMPLEX =     M_turtle_flag(token::__ENUM_NAME::DATA_TYPE_INT)           | flag::__ENUM_NAME::DATA_TYPE_NUMBER,
+                DATA_TYPE_FLOAT   =     M_turtle_flag(token::__ENUM_NAME::DATA_TYPE_FLOAT)         | flag::__ENUM_NAME::DATA_TYPE_NUMBER,
+                DATA_TYPE_COMPLEX =     M_turtle_flag(token::__ENUM_NAME::DATA_TYPE_COMPLEX)       | flag::__ENUM_NAME::DATA_TYPE_NUMBER,
                 DATA_TYPE_EXPONENTIAL = M_turtle_flag(token::__ENUM_NAME::DATA_TYPE_EXPONENTIAL)   | flag::__ENUM_NAME::DATA_TYPE_NUMBER,
                 DATA_TYPE_HEX =         M_turtle_flag(token::__ENUM_NAME::DATA_TYPE_HEX)           | flag::__ENUM_NAME::DATA_TYPE_INT,
                 DATA_TYPE_OCTAL =       M_turtle_flag(token::__ENUM_NAME::DATA_TYPE_OCTAL)         | flag::__ENUM_NAME::DATA_TYPE_INT,
-                DATA_TYPE_BINARY =      M_turtle_flag(token::__ENUM_NAME::DATA_TYPE_BINARY)         | flag::__ENUM_NAME::DATA_TYPE_INT
+                DATA_TYPE_BINARY =      M_turtle_flag(token::__ENUM_NAME::DATA_TYPE_BINARY)        | flag::__ENUM_NAME::DATA_TYPE_INT
             )
             #undef __ENUM_NAME
             #undef DataShiftToMargin
@@ -629,10 +629,13 @@ namespace turtle
             {sti(","),        token::flag::Operator::   DELIMITER_COMMA},
             {sti(";"),        token::flag::Operator::   DELIMITER_SEMICOLON},
             {sti(":"),        token::flag::Operator::   DELIMITER_COLON},
+            {sti("()"), token::flag::Operator::   DELIMITER_CURLY_RIGHT_BRACE},
             {sti("("),        token::flag::Operator::   DELIMITER_CURVED_LEFT_BRACE},
             {sti(")"),        token::flag::Operator::   DELIMITER_CURVED_RIGHT_BRACE},
+            {sti("{}"), token::flag::Operator::   DELIMITER_CURLY_RIGHT_BRACE},
             {sti("{"),        token::flag::Operator::   DELIMITER_CURLY_LEFT_BRACE},
             {sti("}"),        token::flag::Operator::   DELIMITER_CURLY_RIGHT_BRACE},
+            {sti("[]"), token::flag::Operator::   DELIMITER_CURLY_RIGHT_BRACE},
             {sti("["),        token::flag::Operator::   DELIMITER_SQUARE_LEFT_BRACE},
             {sti("]"),        token::flag::Operator::   DELIMITER_SQUARE_RIGHT_BRACE},
             {sti("..."),      token::flag::Operator::   DELIMITER_ELLIPSIS},

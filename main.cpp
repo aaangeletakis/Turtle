@@ -4,7 +4,6 @@
 #include "token.hpp"
 #include "cmd_line.h"
 #include "graph.h"
-
 /*
  * This is a Transcompiler intended for small ~500 max python files.
  * I will probably work on larger projects, but now I'm just writing

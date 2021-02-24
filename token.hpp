@@ -102,43 +102,57 @@ Replace regex comments with )"${2}R"( by using (\(\?#([^)]*)\))|^
     )([<>*\/]{2})=?|(?#                                //capture 2-3 character operators
     )([!%&*+\-<=>@\/\\^|:]=)(?#                        //capture 2 caracter operators
 ))|(?#
-)([!-\/:-@\[-^{-~]|[^\s!-\/:-@\[-^{-~]+)(?#            //capture anything else)
+)([!-\/:-@\[-^{-~]|[^\s!-\/:-@\[-^{-~]+)|(?#            //capture anything else
+)(\s+)
 */
     //when rEgEX is A LaNGUAgE
-    static const std::regex TokenRegex(
-                R"([rRfFUu]{0,2}?("{3}|")((?:[^\\"]|\\.|\\)*\1)?|)"     //capture ' strings
-                R"(([rRfFUu]{0,2}?('{3}|')((?:[^\\']|\\.|\\)*\4)?)|)"   //capture ' strings
-                R"((#[^\r\n]*)|)"                                       //capture comments
-                R"(([\n\r][ \t]*)|)"                                    //capture newlines
-                R"((\\[^\r\n]*)|)"                                      //capture \TheBackslashAndAnythingAfterIt
-                R"(()"
-                    R"((\.{3})|)"                                       //capture ...
-                    R"((->)|)"                                          //capture ->
-                                                                        //fucking floating point numbers
-                    R"((\d[\d_]*\.[\d_]*\d[\d_]*[eE]-?[\d_]*)|)"            //capture exponential floating point literals
-                    R"((\d[\d_]*\.[\d_]*\d[\d_]*[\w]*)|)"                   //capture floating point literals
-                    R"((\d[\d_]*\.[eE]-?[\d_]*)|)"                          //capture exponential floating point literals
-                    R"((\d[\d_]*\.\w*)|)"                                   //capture floating point literals
-                    R"((\.\d[\d_]*[eE]-?[\d_]*)|)"                          //capture exponential floating point literals
-                    R"((\.\d[\d_]*\w*)|)"                                   //capture floating point literals
-                    R"((\d[\d_]*[eE]-?[\d_]*)|)"                        //capture exponential literals
-                    R"(([<>*\/]{2})=?|)"                                //capture 2-3 character operators
-                    R"(([!%&*+\-<=>@\/\\^|:]=))"                        //capture 2 caracter operators
-                R"()|)"
-                R"(([!-\/:-@\[-^{-~]|[^\s!-\/:-@\[-^{-~]+))"            //capture anything else
-    );
+    static constexpr ctll::fixed_string TokenRegex =
+            R"([rRfFUu]{0,2}?("{3}|")((?:[^\\"]|\\.|\\)*\1)?|)"    //capture ' strings
+            R"(([rRfFUu]{0,2}?('{3}|')((?:[^\\']|\\.|\\)*\4)?)|)"  //capture ' strings
+            R"((#[^\r\n]*)|)"                                      //capture comments
+            R"(([\n\r][ \t]*)|)"                                   //capture newlines
+            R"((\\[^\r\n]*)|)"                                     //capture \TheBackslashAndAnythingAfterIt
+            R"(()"
+                R"((\.{3}))"                                       //capture ...
+                R"(|(->))"                                         //capture ->
+                                                                   //fucking floating point numbers
+                R"(|(\d[\d_]*\.[\d_]*\d[\d_]*[eE]-?[\d_]*))"       //capture exponential floating point literals
+                R"(|(\d[\d_]*\.[\d_]*\d[\d_]*[\w]*))"              //capture floating point literals
+                R"(|(\d[\d_]*\.[eE]-?[\d_]*))"                     //capture exponential floating point literals
+                R"(|(\d[\d_]*\.\w*))"                              //capture floating point literals
+                R"(|(\.\d[\d_]*[eE]-?[\d_]*))"                     //capture exponential floating point literals
+                R"(|(\.\d[\d_]*\w*))"                              //capture floating point literals
+                R"(|(\d[\d_]*[eE]-?[\d_]*))"                       //capture exponential literals
+                R"(|([<>*\/]{2})=?)"                               //capture 2-3 character operators
+                R"(|([!%&*+\-<=>@\/\\^|:]=))"                      //capture 2 caracter operators
+            R"()|)"
+            R"((\{\}|\(\)|\[\]))"                                  //capture empty braces. Due to the fact that theres nothing in
+                                                                   //them we can tokenize them and ignore them later
 
-    std::sregex_iterator rend, rit(filedata.begin(), filedata.end(), TokenRegex);
-    Lexemes.reserve(std::distance(rit, rend));
+            R"(|([!-\/:-@\[-^{-~]|[^\s!-\/:-@\[-^{-~]+)|)"         //capture anything else
+            R"((\s+))"
+    ;
+    const auto& matches = ctre::range<TokenRegex>(static_cast<std::string_view>(filedata));
+    {uint_fast32_t i=0;
+    for(auto it = matches.begin(); it !=  matches.end(); ++it){
+        ++i;
+    }
+    Lexemes.reserve(i);}
+
+
 
     unsigned int ln = 0, nl_pos = 0;
-    for (; rit != rend; ++rit){
-        const auto& str = rit->str();
+    uint_fast64_t position = 0;
+    for (const auto & match  : matches){
+        position += match.size();
+        const auto& str = match.str();
         if(str[0] == '\n' || str[0] == '\r'){
             ++ln;
-            nl_pos = rit->position();
+            nl_pos = position;
         }
-        Lexemes.push_back({str, (uint_fast16_t)(rit->position() - nl_pos), ln});
+        if(str[0] != ' '){
+            Lexemes.push_back({str, (uint_fast64_t)(position - nl_pos), ln});
+        }
     }
 }
 
@@ -252,20 +266,22 @@ void lex(turtle::Document &Document){
             switch(Lstr.size()){
                 default:{
                 //parsing the numbers is too complex
-                static const std::regex regex [] = {
-                    std::regex(R"(^[0-9_]+$)"),
-                    std::regex(R"(^[0-9._]+$)"),
-                    std::regex(R"(^[0-9_]+[eE]+-?[0-9_]+$)"),
-                    std::regex(R"(^[0-9._]+[jJ]+$)"),
-                    std::regex(R"(^0[xX]+[0-9A-Fa-f_]+$)"),
-                    std::regex(R"(^0[oO]+[0-9A-Fa-f_]+$)"),
-                    std::regex(R"(^0[bB]+[01_]+$)")
-                };
-                for(;type < lengthof(regex); ++type){
-                    if(std::regex_match(Lstr, regex[type])){
-                        goto _DATA_TYPE_NUMBER;
-                    }
+
+                #define match(STRING, REGEX) {                                  \
+                    static constexpr ctll::fixed_string re = REGEX;             \
+                    if(ctre::match<re>(static_cast<std::string_view>(STRING))){ \
+                        goto _DATA_TYPE_NUMBER;                                 \
+                    }                                                           \
                 }
+                //manual loop unrolling
+                match(Lstr, R"(^[0-9_]+$)");               ++type;
+                match(Lstr, R"(^[0-9._]+$)");              ++type;
+                match(Lstr, R"(^[0-9_]+[eE]+-?[0-9_]+$)"); ++type;
+                match(Lstr, R"(^[0-9._]+[jJ]+$)");         ++type;
+                match(Lstr, R"(^0[xX]+[0-9A-Fa-f_]+$)");   ++type;
+                match(Lstr, R"(^0[oO]+[0-9A-Fa-f_]+$)");   ++type;
+                match(Lstr, R"(^0[bB]+[01_]+$)");          ++type;
+
                 panic("Invalid number literal %s\n", Lstr.c_str());
                 }break;
                 case 1:break;
@@ -274,8 +290,8 @@ void lex(turtle::Document &Document){
             turtle::turtle_flag fmap[] = {
                 turtle::token::flag::Data::DATA_TYPE_INT,
                 turtle::token::flag::Data::DATA_TYPE_FLOAT,
-                turtle::token::flag::Data::DATA_TYPE_COMPLEX,
                 turtle::token::flag::Data::DATA_TYPE_EXPONENTIAL,
+                turtle::token::flag::Data::DATA_TYPE_COMPLEX,
                 turtle::token::flag::Data::DATA_TYPE_HEX,
                 turtle::token::flag::Data::DATA_TYPE_OCTAL,
                 turtle::token::flag::Data::DATA_TYPE_BINARY
