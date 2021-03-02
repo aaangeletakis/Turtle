@@ -55,6 +55,9 @@ namespace turtle {
     //In case I want to change it to something bigger in the future
     typedef uint_fast32_t turtle_flag;
 
+    template<class T>
+    using turtle_vector  = std::basic_string<T>;
+
     typedef long                                    turtle_int;
     typedef turtle_int                              turtle_float;
     typedef std::any                                turtle_any;
@@ -716,22 +719,25 @@ namespace turtle
             {sti("in"),       token::flag::Keyword::    KEYWORD_IN},
             {sti("raise"),    token::flag::Keyword::    KEYWORD_RAISE}
         };
-    //return token flag
-    turtle_flag findToken(const char *__restrict str)
+
+    struct _Lexeme  {
+        std::string str;
+        const uint_fast16_t lpos = 0;
+        const uint_fast16_t lnum = 0;
+    };
+
+    struct Document
     {
-        if (strlen(str) <= 8)
-        {
-            const uint_fast64_t hash = sti(str);
-            for (uint_fast8_t i = 0; i < lengthof(turtleBuiltinTokenMap); ++i)
-            {
-                if (hash == turtleBuiltinTokenMap[i][0])
-                {
-                    return  turtleBuiltinTokenMap[i][1];
-                }
-            }
-        }
-        return token::flag::Control::NULL_TOKEN;
-    }
+        //Document Nodes
+        std::vector<struct _Lexeme> Lexemes;
+        std::vector<struct Node> Nodes;
+        std::vector<struct Node>    Heap;
+        std::vector<struct Node*> _graph;
+        std::vector<struct Node> Graph;
+        std::vector<std::any> data;
+    };
 } // namespace turtle
+
+
 
 #endif // _TURTLE_TOKEN_H

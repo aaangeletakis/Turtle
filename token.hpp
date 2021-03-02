@@ -6,154 +6,34 @@
 #include <regex>
 #include <iostream>
 #include <any>
-#include "node.hpp"
-#include "global.h"
 #include <array>
 #include <any>
 #include <algorithm>
+#include <execution>
+#include "node.hpp"
+#include "global.h"
+#include "commen.h"
 #include "ctre.hpp"
 
 namespace turtle {
 
 void help();
 
-namespace type_ids {
-enum {
-    LONG_DOUBLE,
-    DOUBLE,
-    FLOAT
-};
-enum {
-    INT128,
-    LONG_LONG_INT,
-    LONG_INT,
-    SHORT_INT,
-    CHAR
-};
-}
-
-//slowwwwwwwwwwwwww
-//there is a way to check for overflow in ASM, but is non portable
-unsigned char getIntagerType(const __int128 &i){
-    //check which type overflows
-    __int128 types[] = {
-             (__int128)i, //go down the ladder
-        (long long int)i,
-             (long int)i,
-                  (int)i,
-            (short int)i,
-    };
-    unsigned char v=0;
-    while(i == types[v]) ++v;
-    return v;
-}
-
-auto getDecimalType(const long double &d){
-    //check which type overflows
-    long double types[] = {
-             (long double)d,
-                  (double)d,
-                   (float)d,
-    };
-    unsigned char v=0;
-    while(d == types[v++]);
-    return v;
-}
-
-struct _Lexeme  {
-    std::string str;
-    const uint_fast16_t lpos = 0;
-    const uint_fast16_t lnum = 0;
-};
-
-struct Document
+//return token flag
+turtle_flag findToken(const char *__restrict str)
 {
-    //Document Nodes
-    std::vector<struct _Lexeme> Lexemes;
-    std::vector<struct Node> Nodes;
-    std::vector<struct Node>    Heap;
-    std::vector<struct Node*> _graph;
-    std::vector<struct Node> Graph;
-    std::vector<std::any> data;
-};
-
-auto tokenize(std::string &filedata, std::vector<_Lexeme> &Lexemes)
-{
-/*
-Paste into regex101.com
-Replace regex comments with )"${2}R"( by using (\(\?#([^)]*)\))|^
-
-[rRfFUu]{0,2}?("{3}|")((?:[^\\"]|\\.|\\)*\1)?|(?#      //capture ' strings
-)([rRfFUu]{0,2}?('{3}|')((?:[^\\']|\\.|\\)*\4)?)|(?#   //capture ' strings
-)(#[^\r\n]*)|(?#                                       //capture comments
-)([\n\r][ \t]*)|(?#                                    //capture newlines
-)(\\[^\r\n]*)|(?#                                      //capture \TheBackslashAndAnythingAfterIt
-)((?#
-    )(\.{3})|(?#                                       //capture ...
-    )(->)|(?#                                          //capture ->
-                                                       //fucking floating point numbers
-    )(\d[\d_]*\.[\d_]*\d[\d_]*[eE]-?[\d_]*)|(?#        //capture exponential floating point literals
-    )(\d[\d_]*\.[\d_]*\d[\d_]*[\w]*)|(?#               //capture floating point literals
-    )(\d[\d_]*\.[eE]-?[\d_]*)|(?#                      //capture exponential floating point literals
-    )(\d[\d_]*\.\w*)|(?#                               //capture floating point literals
-    )(\.\d[\d_]*[eE]-?[\d_]*)|(?#                      //capture exponential floating point literals
-    )(\.\d[\d_]*\w*)|(?#                               //capture floating point literals
-    )(\d[\d_]*[eE]-?[\d_]*)|(?#                        //capture exponential literals
-    )([<>*\/]{2})=?|(?#                                //capture 2-3 character operators
-    )([!%&*+\-<=>@\/\\^|:]=)(?#                        //capture 2 caracter operators
-))|(?#
-)([!-\/:-@\[-^{-~]|[^\s!-\/:-@\[-^{-~]+)|(?#            //capture anything else
-)(\s+)
-*/
-    //when rEgEX is A LaNGUAgE
-    static constexpr ctll::fixed_string TokenRegex =
-            R"([rRfFUu]{0,2}?("{3}|")((?:[^\\"]|\\.|\\)*\1)?|)"    //capture ' strings
-            R"(([rRfFUu]{0,2}?('{3}|')((?:[^\\']|\\.|\\)*\4)?)|)"  //capture ' strings
-            R"((#[^\r\n]*)|)"                                      //capture comments
-            R"(([\n\r][ \t]*)|)"                                   //capture newlines
-            R"((\\[^\r\n]*)|)"                                     //capture \TheBackslashAndAnythingAfterIt
-            R"(()"
-                R"((\.{3}))"                                       //capture ...
-                R"(|(->))"                                         //capture ->
-                                                                   //fucking floating point numbers
-                R"(|(\d[\d_]*\.[\d_]*\d[\d_]*[eE]-?[\d_]*))"       //capture exponential floating point literals
-                R"(|(\d[\d_]*\.[\d_]*\d[\d_]*[\w]*))"              //capture floating point literals
-                R"(|(\d[\d_]*\.[eE]-?[\d_]*))"                     //capture exponential floating point literals
-                R"(|(\d[\d_]*\.\w*))"                              //capture floating point literals
-                R"(|(\.\d[\d_]*[eE]-?[\d_]*))"                     //capture exponential floating point literals
-                R"(|(\.\d[\d_]*\w*))"                              //capture floating point literals
-                R"(|(\d[\d_]*[eE]-?[\d_]*))"                       //capture exponential literals
-                R"(|([<>*\/]{2})=?)"                               //capture 2-3 character operators
-                R"(|([!%&*+\-<=>@\/\\^|:]=))"                      //capture 2 caracter operators
-            R"()|)"
-            R"((\{\}|\(\)|\[\]))"                                  //capture empty braces. Due to the fact that theres nothing in
-                                                                   //them we can tokenize them and ignore them later
-
-            R"(|([!-\/:-@\[-^{-~]|[^\s!-\/:-@\[-^{-~]+)|)"         //capture anything else
-            R"((\s+))"
-    ;
-    const auto& matches = ctre::range<TokenRegex>(static_cast<std::string_view>(filedata));
-    {uint_fast32_t i=0;
-    for(auto it = matches.begin(); it !=  matches.end(); ++it){
-        ++i;
-    }
-    Lexemes.reserve(i);}
-
-
-
-    unsigned int ln = 0, nl_pos = 0;
-    uint_fast64_t position = 0;
-    for (const auto & match  : matches){
-        position += match.size();
-        const auto& str = match.str();
-        if(str[0] == '\n' || str[0] == '\r'){
-            ++ln;
-            nl_pos = position;
-        }
-        if(str[0] != ' '){
-            Lexemes.push_back({str, (uint_fast64_t)(position - nl_pos), ln});
+    if (strlen(str) <= 8)
+    {
+        const uint_fast64_t hash = sti(str);
+        for (uint_fast8_t i = 0; i < lengthof(turtleBuiltinTokenMap); ++i)
+        {
+            if (hash == turtleBuiltinTokenMap[i][0])
+            {
+                return  turtleBuiltinTokenMap[i][1];
+            }
         }
     }
+    return token::flag::Control::NULL_TOKEN;
 }
 
 #if DEBUG_CPP
@@ -217,8 +97,7 @@ void lex(turtle::Document &Document){
     for(auto& Lexeme : Document.Lexemes){
         auto & Lstr = Lexeme.str;
         Node tmpNode;
-        auto & flag = tmpNode.NodeFlags;
-        flag = turtle::token::flag::Control::NULL_TOKEN;
+        tmpNode.NodeFlags = turtle::token::flag::Control::NULL_TOKEN;
 
         switch(Lstr[0]){
         case  0  ...   8:
@@ -244,7 +123,7 @@ void lex(turtle::Document &Document){
                     }
                 }
             }
-            flag |= turtle::token::flag::Control::NEWLINE;
+            tmpNode.NodeFlags |= turtle::token::flag::Control::NEWLINE;
             tmpNode.header |= (len-1);
             }break;
         case '.':{
@@ -254,60 +133,50 @@ void lex(turtle::Document &Document){
         }
         //fucking numbers
         case '0' ... '9':{
-
-            enum {
-                RATIONAL_NUM,
+            #define num_pattern(PATTERN)                                        \
+                [&](const std::string_view & str){                              \
+                    static constexpr ctll::fixed_string re{PATTERN};            \
+                    return ctre::match<re>(static_cast<std::string_view>(str)); \
+                }
+            enum num_types {
+                INT,
+                FLOAT,
                 EXPONENTIAL,
                 COMPLEX,
-                HEX_OR_OCTAL, //cuz they both have the same alphabet
-                BINARY
+                HEX,
+                OCTAL,
+                BINARY,
             };
-            uint_fast8_t type = 0;
-            switch(Lstr.size()){
-                default:{
-                //parsing the numbers is too complex
+            using namespace turtle::token;
+            const static std::pair<std::function<bool(const std::string_view&)>, turtle::turtle_flag> regexes[] = {
+                [INT]         = {num_pattern(R"(^[0-9_]+$)"),               flag::Data::DATA_TYPE_INT},
+                [FLOAT]       = {num_pattern(R"(^[0-9._]+$)"),              flag::Data::DATA_TYPE_FLOAT},
+                [HEX]         = {num_pattern(R"(^0[xX]+[0-9A-Fa-f_]+$)"),   flag::Data::DATA_TYPE_HEX},
+                [OCTAL]       = {num_pattern(R"(^0[oO]+[0-9A-Fa-f_]+$)"),   flag::Data::DATA_TYPE_OCTAL},
+                [BINARY]      = {num_pattern(R"(^0[bB]+[01_]+$)"),          flag::Data::DATA_TYPE_BINARY},
+                [COMPLEX]     = {num_pattern(R"(^[0-9._]+[jJ]+$)"),         flag::Data::DATA_TYPE_COMPLEX,},
+                [EXPONENTIAL] = {num_pattern(R"(^[0-9_]+[eE]+-?[0-9_]+$)"), flag::Data::DATA_TYPE_EXPONENTIAL},
+            };
+            #undef num_pattern
+            auto it = std::begin(regexes);
 
-                #define match(STRING, REGEX) {                                  \
-                    static constexpr ctll::fixed_string re = REGEX;             \
-                    if(ctre::match<re>(static_cast<std::string_view>(STRING))){ \
-                        goto _DATA_TYPE_NUMBER;                                 \
-                    }                                                           \
+            //if greater than 1 digit check what kind of number
+            if(Lstr.size() > 1){
+                it = std::find_if(std::execution::par, it, std::end(regexes), [&](const auto& regex){
+                    return regex.first(Lstr);
+                });
+                if(it == std::end(regexes)){
+                    panic("Invalid number literal %s\n", Lstr.c_str());
                 }
-                //manual loop unrolling
-                match(Lstr, R"(^[0-9_]+$)");               ++type;
-                match(Lstr, R"(^[0-9._]+$)");              ++type;
-                match(Lstr, R"(^[0-9_]+[eE]+-?[0-9_]+$)"); ++type;
-                match(Lstr, R"(^[0-9._]+[jJ]+$)");         ++type;
-                match(Lstr, R"(^0[xX]+[0-9A-Fa-f_]+$)");   ++type;
-                match(Lstr, R"(^0[oO]+[0-9A-Fa-f_]+$)");   ++type;
-                match(Lstr, R"(^0[bB]+[01_]+$)");          ++type;
-
-                panic("Invalid number literal %s\n", Lstr.c_str());
-                }break;
-                case 1:break;
             }
-            _DATA_TYPE_NUMBER:
-            turtle::turtle_flag fmap[] = {
-                turtle::token::flag::Data::DATA_TYPE_INT,
-                turtle::token::flag::Data::DATA_TYPE_FLOAT,
-                turtle::token::flag::Data::DATA_TYPE_EXPONENTIAL,
-                turtle::token::flag::Data::DATA_TYPE_COMPLEX,
-                turtle::token::flag::Data::DATA_TYPE_HEX,
-                turtle::token::flag::Data::DATA_TYPE_OCTAL,
-                turtle::token::flag::Data::DATA_TYPE_BINARY
-            };
-            flag |= fmap[type];
-            tmpNode.header |=  Document.data.size();
-            Document.data.push_back("as");
+            tmpNode.NodeFlags |= it->second;
+            tmpNode.header    |= Document.data.size();
+            Document.data.push_back(Lstr);
         }break;
         //fucking strings
-        case 'r':
-        case 'R':
-        case 'u':
-        case 'U':
-        case 'f'://f is for friendship :)
-        case 'F':{
-            if(Lstr.size() > 2){
+        case 'a' ... 'z':
+        case 'A' ... 'Z':{
+            if(Lstr.size() > 1){
                 for(unsigned int j = 1; j < 3; ++j){
                     if(Lstr[j] == '"' || Lstr[j] == '\''){
                         //if(lexeme starts with [rRuUfF] and has ('"' or '\'') ) {goto _TOKEN_STRING_WITH_PREFIX;}
@@ -320,111 +189,69 @@ void lex(turtle::Document &Document){
                                        //                       │                                                               │
             _TOKEN_STRING_WITH_PREFIX: //   <───────────────────┘                                                               │
             enum {                                                                                                           // │
-                _NULL_FLAG     = 0b000,                                                                                      // │
-                _RAW_FLAG      = 0b001,                                                                                      // │
-                _UNICODE_FLAG  = 0b010,                                                                                      // │
-                _FORMATED_FLAG = 0b100,                                                                                      // │
+                NULL_FLAG     = 0b000,                                                                                      // │
+                RAW_FLAG      = 0b001,                                                                                      // │
+                UNICODE_FLAG  = 0b010,                                                                                      // │
+                FORMATED_FLAG = 0b100,                                                                                      // │
             };                                                                                                               // │
                                                                                                                              // └>───────────────────────────────>┐
-            /*                                                                                                                                                 // │
-             * if only we could do                                                                                                                             // │
-             *                                                                                                                                                 // │
-             * static const uint_fast8_t fmap[127] = {
-             *                  _NULL_FLAG,       //zero initialize any unspecified elements
-             *      ['R'] =      _RAW_FLAG,
-             *      ['r'] =      _RAW_FLAG,
-             *      ['f'] = _FORMATED_FLAG,
-             *      ['F'] = _FORMATED_FLAG,
-             *      ['U'] =  _UNICODE_FLAG,
-             *      ['u'] =  _UNICODE_FLAG
-             * };
-             *
-             * like in C 😭
-             * That would make constructing a jumptable so much simpler
-            */
-            constexpr static uint_fast8_t fmap[] = {
-                  _NULL_FLAG, /*  0 */     _NULL_FLAG, /*  1 */     _NULL_FLAG, /*  2 */     _NULL_FLAG, /*  3 */     _NULL_FLAG, /*  4 */
-                  _NULL_FLAG, /*  5 */     _NULL_FLAG, /*  6 */     _NULL_FLAG, /*  7 */     _NULL_FLAG, /*  8 */     _NULL_FLAG, /*  9 */
-                  _NULL_FLAG, /* 10 */     _NULL_FLAG, /* 11 */     _NULL_FLAG, /* 12 */     _NULL_FLAG, /* 13 */     _NULL_FLAG, /* 14 */
-                  _NULL_FLAG, /* 15 */     _NULL_FLAG, /* 16 */     _NULL_FLAG, /* 17 */     _NULL_FLAG, /* 18 */     _NULL_FLAG, /* 19 */
-                  _NULL_FLAG, /* 20 */     _NULL_FLAG, /* 21 */     _NULL_FLAG, /* 22 */     _NULL_FLAG, /* 23 */     _NULL_FLAG, /* 24 */
-                  _NULL_FLAG, /* 25 */     _NULL_FLAG, /* 26 */     _NULL_FLAG, /* 27 */     _NULL_FLAG, /* 28 */     _NULL_FLAG, /* 29 */
-                  _NULL_FLAG, /* 30 */     _NULL_FLAG, /* 31 */     _NULL_FLAG, /* 32 */     _NULL_FLAG, /*  ! */     _NULL_FLAG, /*  " */
-                  _NULL_FLAG, /*  # */     _NULL_FLAG, /*  $ */     _NULL_FLAG, /*  % */     _NULL_FLAG, /*  & */     _NULL_FLAG, /*  ' */
-                  _NULL_FLAG, /*  ( */     _NULL_FLAG, /*  ) */     _NULL_FLAG, /*  * */     _NULL_FLAG, /*  + */     _NULL_FLAG, /*  , */
-                  _NULL_FLAG, /*  - */     _NULL_FLAG, /*  . */     _NULL_FLAG, /*  / */     _NULL_FLAG, /*  0 */     _NULL_FLAG, /*  1 */
-                  _NULL_FLAG, /*  2 */     _NULL_FLAG, /*  3 */     _NULL_FLAG, /*  4 */     _NULL_FLAG, /*  5 */     _NULL_FLAG, /*  6 */
-                  _NULL_FLAG, /*  7 */     _NULL_FLAG, /*  8 */     _NULL_FLAG, /*  9 */     _NULL_FLAG, /*  : */     _NULL_FLAG, /*  ; */
-                  _NULL_FLAG, /*  < */     _NULL_FLAG, /*  = */     _NULL_FLAG, /*  > */     _NULL_FLAG, /*  ? */     _NULL_FLAG, /*  @ */
-                  _NULL_FLAG, /*  A */     _NULL_FLAG, /*  B */     _NULL_FLAG, /*  C */     _NULL_FLAG, /*  D */     _NULL_FLAG, /*  E */
-              _FORMATED_FLAG, /*  F */     _NULL_FLAG, /*  G */     _NULL_FLAG, /*  H */     _NULL_FLAG, /*  I */     _NULL_FLAG, /*  J */
-                  _NULL_FLAG, /*  K */     _NULL_FLAG, /*  L */     _NULL_FLAG, /*  M */     _NULL_FLAG, /*  N */     _NULL_FLAG, /*  O */
-                  _NULL_FLAG, /*  P */     _NULL_FLAG, /*  Q */      _RAW_FLAG, /*  R */     _NULL_FLAG, /*  S */     _NULL_FLAG, /*  T */
-               _UNICODE_FLAG, /*  U */     _NULL_FLAG, /*  V */     _NULL_FLAG, /*  W */     _NULL_FLAG, /*  X */     _NULL_FLAG, /*  Y */
-                  _NULL_FLAG, /*  Z */     _NULL_FLAG, /*  [ */     _NULL_FLAG, /*  \ */     _NULL_FLAG, /*  ] */     _NULL_FLAG, /*  ^ */
-                  _NULL_FLAG, /*  _ */     _NULL_FLAG, /*  ` */     _NULL_FLAG, /*  a */     _NULL_FLAG, /*  b */     _NULL_FLAG, /*  c */
-                  _NULL_FLAG, /*  d */     _NULL_FLAG, /*  e */ _FORMATED_FLAG, /*  f */     _NULL_FLAG, /*  g */     _NULL_FLAG, /*  h */
-                  _NULL_FLAG, /*  i */     _NULL_FLAG, /*  j */     _NULL_FLAG, /*  k */     _NULL_FLAG, /*  l */     _NULL_FLAG, /*  m */
-                  _NULL_FLAG, /*  n */     _NULL_FLAG, /*  o */     _NULL_FLAG, /*  p */     _NULL_FLAG, /*  q */      _RAW_FLAG, /*  r */
-                  _NULL_FLAG, /*  s */     _NULL_FLAG, /*  t */  _UNICODE_FLAG, /*  u */     _NULL_FLAG, /*  v */     _NULL_FLAG, /*  w */
-                  _NULL_FLAG, /*  x */     _NULL_FLAG, /*  y */     _NULL_FLAG, /*  z */     _NULL_FLAG, /*  { */     _NULL_FLAG, /*  | */
-                  _NULL_FLAG, /*  } */     _NULL_FLAG, /*  ~ */                                                                                                // │
-            };                                                                                                                                                 // │
-                                                                                                                                                               // │
-            //sexy, instantaneous                                                                                                                              // │
-            uint_fast8_t f = 0;                                                                                                                                // │
+            //Give an any unspecified elements NULL_FLAG
+            constexpr static uint_fast8_t fmap[SCHAR_MAX] = {
+                      ['R'] =      RAW_FLAG,
+                      ['r'] =      RAW_FLAG,
+                      ['f'] = FORMATED_FLAG,
+                      ['F'] = FORMATED_FLAG,
+                      ['U'] =  UNICODE_FLAG,
+                      ['u'] =  UNICODE_FLAG
+            };
+            using namespace turtle::token;
+            //Give an any unspecified elements flag::Control::NULL_TOKEN
+            constexpr static turtle_flag tmap[] = {
+                [RAW_FLAG]                     = flag::Data::DATA_TYPE_RAW_STRING,              // 1 0b001
+                [UNICODE_FLAG]                 = flag::Data::DATA_TYPE_UNICODE_STRING,          // 2 0b010
+                [FORMATED_FLAG]                = flag::Data::DATA_TYPE_FORMATED_STRING,         // 4 0b100
+                [UNICODE_FLAG | FORMATED_FLAG] = flag::Data::DATA_TYPE_FORMATED_UNICODE_STRING  // 6 0b110
+            };
+            constexpr const char * premap [] = {
+                [RAW_FLAG | FORMATED_FLAG] = "raw formatted",
+                [RAW_FLAG |  UNICODE_FLAG] = "raw unicode",
+            };
+            //sexy, instantaneous
+            uint_fast8_t f = 0;
             for(auto * c = Lstr.data(); !(*c == '"' || *c == '\''); ++c){
                 f ^= *(fmap + *c);
-            }
-            constexpr static turtle_flag tmap[]={
-                    turtle::token::flag::Control::NULL_TOKEN,                 // 0 0b000 _NULL_FLAG                   // error: string prefix specified twice
-
-                turtle::token::flag::Data::DATA_TYPE_RAW_STRING,              // 1 0b001 _RAW_FLAG
-                turtle::token::flag::Data::DATA_TYPE_UNICODE_STRING,          // 2 0b010 _UNICODE_FLAG
-
-                    turtle::token::flag::Control::NULL_TOKEN,                 // 3 0b011 _RAW_FLAG      |  _UNICODE_FLAG //error: no such thing as a rU string
-
-                turtle::token::flag::Data::DATA_TYPE_FORMATED_STRING,         // 4 0b100 _FORMATED_FLAG
-
-                    turtle::token::flag::Control::NULL_TOKEN,                 // 5 0b101 _RAW_FLAG      | _FORMATED_FLAG //error: no such thing as a rF string
-
-                turtle::token::flag::Data::DATA_TYPE_FORMATED_UNICODE_STRING  // 6 0b110 _UNICODE_FLAG  | _FORMATED_FLAG
-            };
-            flag |= tmap[f];
-            if(flag == turtle::token::flag::Control::NULL_TOKEN){
-                constexpr uint_fast8_t preStrs[7] = {0,0,0,1};//im lazy
-                constexpr const char * pres[] =  {"formatted", "unicode"};
                 switch(f){
-                    case _RAW_FLAG |  _UNICODE_FLAG:
-                    case _RAW_FLAG | _FORMATED_FLAG:
-                        panic("Line %d:%d Theres no such thing as a raw %s string\n", Lexeme.lnum + 1, Lexeme.lpos, pres[preStrs[f]]);
+                    case RAW_FLAG |  UNICODE_FLAG:
+                    case RAW_FLAG | FORMATED_FLAG:
+                        panic("Line %d:%d Theres no such thing as a %s string\n", Lexeme.lnum + 1, Lexeme.lpos, premap[f]);
                         break;
-                    case _NULL_FLAG:
-                        panic("Line %d:%d String prefix specified twice\n", Lexeme.lnum + 1, Lexeme.lpos, pres[preStrs[f]]);
+                    case NULL_FLAG:
+                        panic("Line %d:%d Invalid string prefix\n", Lexeme.lnum + 1, Lexeme.lpos);
                         break;
                 }
             }
+            tmpNode.NodeFlags |= tmap[f];
                                                                                                                                                                // │
         }                                                                                                                                                      // │
         [[fallthrough]];                                                                                                                                       // │
         case '"':                                                                                                                                              // │
         case '\'':{                                                                                                                                            // │
-            if( Lstr.length() == 1 ||
-               (Lstr.length() == 3 && (Lstr[1] == '\'' || Lstr[1] == '"'))){                                                                                                                            // │
+            constexpr static ctll::fixed_string invalid_string{R"([a-zA-Z]{0,2}?("|')(\1{2})?)"};
+            if(ctre::match<invalid_string>(static_cast<std::string_view>(Lstr))){                                                                              // │
                 panic("Line %d:%d Non terminating string\n", Lexeme.lnum + 1, Lexeme.lpos);                                                                    // │
             }                                                                                                                                                  // │
-            flag |= turtle::token::flag::Data::DATA_TYPE_STRING;                                                                                               // │
+            tmpNode.NodeFlags |= turtle::token::flag::Data::DATA_TYPE_STRING;                                                                                  // │
             tmpNode.header |= Document.data.size();
             Document.data.push_back((std::string_view)Lstr);                                                                                                   // │
             }break;                                                                                                                                            // │
         default:                                                                                                                                               // │
             _DEFUALT_FIND_TOKEN: // <────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────<┘
             //turtle::findToken returns 0 if not found in the predefined tokens map
-            if( (flag |= turtle::findToken(Lstr.c_str())) ){
+            if( (tmpNode.NodeFlags |= turtle::findToken(Lstr.c_str())) ){
                 break;
             }
-            flag |= turtle::token::flag::Type::IDENTIFIER;
-            tmpNode.header |= Document.data.size();
+            tmpNode.NodeFlags |= turtle::token::flag::Type::IDENTIFIER;
+            tmpNode.header    |= Document.data.size();
             Document.data.push_back(Lstr);
             break;
         }
